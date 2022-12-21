@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/plugins/qpip">
+    <file>icon.png</file>
+    <file>icons/snake_bird.png</file>
+    <file>icons/pypi.png</file>
+  </qresource>
+</RCC>

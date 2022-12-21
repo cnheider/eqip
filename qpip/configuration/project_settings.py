@@ -1,0 +1,5 @@
+from .. import PROJECT_NAME
+
+DEFAULT_PROJECT_SETTINGS = {
+    "RESOURCES_BASE_PATH": f":/plugins/{PROJECT_NAME}",
+}
