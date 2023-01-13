@@ -11,11 +11,11 @@ email=christian.heider@alexandra.dk
 
 about=This tool provieds a way to manage python requirements using pip in the QGis python environment.
 
-tracker=https://github.com/cnheider/Qpip/issues
-repository=https://github.com/cnheider/Qpip
+tracker=https://github.com/cnheider/eqip/issues
+repository=https://github.com/cnheider/eqip
 # End of mandatory metadata
 
-homepage=https://github.com/cnheider/Qpip
+homepage=https://github.com/cnheider/eqip
 
 icon=icon.png
 
