@@ -225,3 +225,5 @@ pip-wheel-metadata
 logs
 
 *.bkp
+
+*.zip
