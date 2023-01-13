@@ -6,6 +6,7 @@ VERSION = "0.0.1"
 PLUGIN_AUTHOR = "Heider"
 
 MANUAL_REQUIREMENTS = [
+    "qgis"
     # 'qgis' # not visible to pip?
 ]
 

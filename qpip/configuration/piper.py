@@ -8,11 +8,15 @@ __doc__ = r"""
            """
 
 import cgi
+import subprocess
+import sys
 from pathlib import Path
 
 __all__ = ["install_requirements_from_file", "install_requirements_from_name"]
 
-from typing import Iterable, Tuple
+from typing import Iterable, List, Tuple
+
+import pkg_resources
 
 
 def install_requirements_from_file(requirements_path: Path) -> None:
@@ -34,14 +38,12 @@ def install_requirements_from_file(requirements_path: Path) -> None:
         pip.main(args)
 
     elif False:
-        from subprocess import call
 
-        call(["pip"] + args)
+        SP_CALLABLE(["pip"] + args)
 
     elif True:
-        from subprocess import call
 
-        call(["python", "-m", "pip"] + args)
+        SP_CALLABLE(["python", "-m", "pip"] + args)
 
 
 def is_requirement_installed(requirement_name: str) -> bool:
@@ -67,15 +69,26 @@ def get_requirement_version(requirement_name: str) -> str:
 
 
 def get_installed_version(requirement_name: str, reload: bool = True) -> str:
-    import pkg_resources
     import importlib
 
+    if reload:
+        importlib.invalidate_caches()
+        try:
+            if requirement_name in sys.modules:
+                importlib.reload(sys.modules[requirement_name])
+            else:
+                importlib.import_module(requirement_name)
+        except (KeyError, ModuleNotFoundError):
+            return None
+
     try:
+        # importlib.reload(sys.modules['pkg_resources'])
         dist = pkg_resources.get_distribution(requirement_name)
         if dist:
             return dist.parsed_version  # .version
     except pkg_resources.DistributionNotFound as e:
         pass
+
     return None
 
 
@@ -88,46 +101,56 @@ def get_newest_version(requirement_name: str) -> str:
         urlopen,
     )  # TODO: should use QgsNetworkAccessManager instead for networking
 
-    DEFAULT_PIP_INDEX = os.environ.get("PIP_INDEX_URL", "https://pypi.org/pypi/")
+    from urllib.error import HTTPError
 
-    def get_charset(headers, default: str = "utf-8"):
-        # this is annoying.
-        try:
-            charset = headers.get_content_charset(default)
-        except AttributeError:
-            # Python 2
-            charset = headers.getparam("charset")
-            if charset is None:
-                ct_header = headers.getheader("Content-Type")
-                content_type, params = cgi.parse_header(ct_header)
-                charset = params.get("charset", default)
-        return charset
+    try:
 
-    def json_get(url: str, headers: Tuple = (("Accept", "application/json"),)):
-        request = Request(url=url, headers=dict(headers))
-        response = urlopen(request)
-        code = response.code
-        if code != 200:
-            err = ConnectionError(f"Unexpected response code {code}")
-            err.response_data = response.read()
-            raise err
-        raw_data = response.read()
-        response_encoding = get_charset(response.headers)
-        decoded_data = raw_data.decode(response_encoding)
-        data = json.loads(decoded_data)
-        return data
+        DEFAULT_PIP_INDEX = os.environ.get("PIP_INDEX_URL", "https://pypi.org/pypi/")
 
-    def get_data_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
-        uri = f"{index.rstrip('/')}/{name.split('[')[0]}/json"
-        data = json_get(uri)
-        return data
+        def get_charset(headers, default: str = "utf-8"):
+            # this is annoying.
+            try:
+                charset = headers.get_content_charset(default)
+            except AttributeError:
+                # Python 2
+                charset = headers.getparam("charset")
+                if charset is None:
+                    ct_header = headers.getheader("Content-Type")
+                    content_type, params = cgi.parse_header(ct_header)
+                    charset = params.get("charset", default)
+            return charset
 
-    def get_versions_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
-        data = get_data_pypi(name, index)
-        version_numbers = sorted(data["releases"], key=parse_version)
-        return tuple(version_numbers)
+        def json_get(url: str, headers: Tuple = (("Accept", "application/json"),)):
+            request = Request(url=url, headers=dict(headers))
+            response = urlopen(request)
+            code = response.code
+            if code != 200:
+                err = ConnectionError(f"Unexpected response code {code}")
+                err.response_data = response.read()
+                raise err
+            raw_data = response.read()
+            response_encoding = get_charset(response.headers)
+            decoded_data = raw_data.decode(response_encoding)
+            data = json.loads(decoded_data)
+            return data
 
-    return parse_version(get_versions_pypi(requirement_name)[-1])
+        def get_data_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
+            uri = f"{index.rstrip('/')}/{name.split('[')[0]}/json"
+            data = json_get(uri)
+            return data
+
+        def get_versions_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
+            data = get_data_pypi(name, index)
+            version_numbers = sorted(data["releases"], key=parse_version)
+            return tuple(version_numbers)
+
+        return parse_version(get_versions_pypi(requirement_name)[-1])
+    except HTTPError:
+        return None
+
+
+def pip_freeze_list() -> List:
+    ...
 
 
 def is_requirement_updatable(requirement_name: str) -> bool:
@@ -140,10 +163,19 @@ def is_requirement_updatable(requirement_name: str) -> bool:
         ):
             return True
 
-    if get_newest_version(requirement_name) > get_installed_version(requirement_name):
-        return True
+    s = get_newest_version(requirement_name)
+    if s:
+        if s > get_installed_version(requirement_name):
+            return True
 
     return False
+
+
+SP_CALLABLE = subprocess.check_call  # subprocess.call
+
+
+# subprocess.Popen(**ADDITIONAL_PIPE_KWS)
+# ADDITIONAL_PIPE_KWS =  dict(stderr=subprocess.PIPE,stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
 
 def install_requirements_from_name(*requirements_name: Iterable[str]) -> None:
@@ -166,16 +198,12 @@ def install_requirements_from_name(*requirements_name: Iterable[str]) -> None:
         pip.main(args)
 
     elif False:
-        from subprocess import call
-
-        call(["pip"] + args)
+        SP_CALLABLE(["pip"] + args)
 
     elif True:
-        from subprocess import call
-        import sys
 
         interpreter = Path(sys.executable)
-        call([str(interpreter), "-m", "pip"] + args)
+        SP_CALLABLE([str(interpreter), "-m", "pip"] + args)
 
 
 def remove_requirements_from_name(*requirements_name: Iterable[str]) -> None:
@@ -189,21 +217,18 @@ def remove_requirements_from_name(*requirements_name: Iterable[str]) -> None:
         args = ["uninstall", *requirements_name, "-y"]
         print(args)
         if False:
-            import pip
+            import pip  # DEPRECATE
 
             pip.main(args)
 
         elif False:
-            from subprocess import call
-
-            call(["pip"] + args)
+            SP_CALLABLE(["pip"] + args)  # Use interpreter path instead
 
         elif True:
-            from subprocess import call
-            import sys
-
             interpreter = Path(sys.executable)
-            call([str(interpreter), "-m", "pip"] + args)  # figure out which python!
+            SP_CALLABLE(
+                [str(interpreter), "-m", "pip"] + args
+            )  # figure out which python!
 
 
 if __name__ == "__main__":
@@ -236,17 +261,17 @@ def is_manual(query: str) -> bool:
 
 
 def append_item_state(query: str) -> str:
-
-    if not is_package_installed(query):
-        return f"{query} (Not Installed)"
-
-    if is_package_updatable(query):
-        return f"{query} (Updatable)"
+    out = query
 
     if is_manual(query):
-        return f"{query} (Manual)"
+        out = f"{out} (Manual)"
 
-    return query
+    if not is_package_installed(query):
+        out = f"{out} (Not Installed)"
+    elif is_package_updatable(query):
+        out = f"{out} (Updatable)"
+
+    return out
 
 
 def strip_item_state(query: str) -> str:

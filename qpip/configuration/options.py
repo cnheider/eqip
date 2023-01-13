@@ -14,7 +14,6 @@ from typing import Any, Mapping, Optional
 
 import pkg_resources
 from PyQt5.QtCore import Qt
-from jord.qgis_utilities.helpers.environment import remove_requirements_from_name
 from qgis.PyQt import QtGui, uic
 from qgis.PyQt.QtGui import QIcon, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
@@ -25,6 +24,7 @@ from .piper import (
     append_item_state,
     install_requirements_from_name,
     is_package_installed,
+    remove_requirements_from_name,
     strip_item_state,
 )
 from .project_settings import DEFAULT_PROJECT_SETTINGS
@@ -142,6 +142,14 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
         # self.requirements_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
 
+        self.populate_environment_button.clicked.connect(
+            self.on_populate_environment
+        )  # May be slow
+        self.update_environment_button.clicked.connect(self.on_update_environment)
+
+        # self.environment_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
+        # pressed
+
     def on_install_requirement(self):
         pkgs_to_be_installed = []
         pkgs_to_be_removed = []
@@ -197,9 +205,11 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
                 self.requirements_list_model.appendRow(item)
 
         for r in pkg_resources.parse_requirements(MANUAL_REQUIREMENTS):
-            item = QStandardItem(append_item_state(r.name))
+            n = append_item_state(r.name)
+            # n = f'{append_item_state(r.name)} (Manual)'
+            item = QStandardItem(n)
 
-            item.setCheckable(True)
+            item.setCheckable(False)
             if is_package_installed(r.name):
                 item.setCheckState(Qt.Checked)
             else:
@@ -209,6 +219,42 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
 
         self.requirements_list_view.setModel(self.requirements_list_model)
         self.requirements_list_view.show()
+
+    def populate_environment(self):
+        if hasattr(self, "environment_list_model"):
+            del self.environment_list_model
+
+        self.environment_list_model = QStandardItemModel(self.environment_list_view)
+
+        if True:
+            for r in pkg_resources.working_set:
+                l = r.key
+                n = append_item_state(l)
+
+                if len(self.environment_list_model.findItems(n)) < 1:
+
+                    item = QStandardItem(n)
+                    item.setCheckable(True)
+                    if False:
+                        if is_package_installed(l):
+                            item.setCheckState(Qt.Checked)
+                        else:
+                            item.setCheckState(Qt.Unchecked)
+                    else:
+                        item.setCheckState(Qt.Checked)
+
+                    self.environment_list_model.appendRow(item)
+
+        self.environment_list_view.setModel(self.environment_list_model)
+        self.environment_list_view.show()
+
+    def on_update_environment(self):
+        ...
+        # TODO: STILL NEEDS SOME WORK!
+        # self.populate_environment()
+
+    def on_populate_environment(self):
+        self.populate_environment()
 
     def on_refresh_button_clicked(self):
         self.populate_requirements()
