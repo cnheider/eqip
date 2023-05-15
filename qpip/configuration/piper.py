@@ -7,16 +7,25 @@ __doc__ = r"""
            Created on 12/19/22
            """
 
+__all__ = ["install_requirements_from_file", "install_requirements_from_name"]
+
 import cgi
 import subprocess
 import sys
 from pathlib import Path
 
-__all__ = ["install_requirements_from_file", "install_requirements_from_name"]
 
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Tuple, Optional, Union
 
 import pkg_resources
+from pkg_resources.extern.packaging.version import InvalidVersion, Version
+from warg import passes_kws_to
+
+SP_CALLABLE = subprocess.check_call  # subprocess.call
+
+
+# subprocess.Popen(**ADDITIONAL_PIPE_KWS)
+# ADDITIONAL_PIPE_KWS =  dict(stderr=subprocess.PIPE,stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
 
 def install_requirements_from_file(requirements_path: Path) -> None:
@@ -38,21 +47,21 @@ def install_requirements_from_file(requirements_path: Path) -> None:
         pip.main(args)
 
     elif False:
-
         SP_CALLABLE(["pip"] + args)
 
     elif True:
-
         SP_CALLABLE(["python", "-m", "pip"] + args)
 
 
 def is_requirement_installed(requirement_name: str) -> bool:
+    current_version = get_installed_version(requirement_name)
+    if current_version == "Broken":
+        return False
+
     if requirement_has_version(requirement_name):
-        if get_requirement_version(requirement_name) == get_installed_version(
-            requirement_name
-        ):
+        if get_requirement_version(requirement_name) == current_version:
             return True
-    if get_installed_version(requirement_name):
+    if current_version:
         return True
     return False
 
@@ -68,7 +77,9 @@ def get_requirement_version(requirement_name: str) -> str:
     return None
 
 
-def get_installed_version(requirement_name: str, reload: bool = True) -> str:
+def get_installed_version(
+    requirement_name: str, reload: bool = True
+) -> Optional[Union[str, Version]]:
     import importlib
 
     if reload:
@@ -80,6 +91,10 @@ def get_installed_version(requirement_name: str, reload: bool = True) -> str:
                 importlib.import_module(requirement_name)
         except (KeyError, ModuleNotFoundError):
             return None
+        except Exception as e:
+            # print(f'{requirement_name} is broken {e}')
+            return "Broken"
+            # return None
 
     try:
         # importlib.reload(sys.modules['pkg_resources'])
@@ -104,7 +119,6 @@ def get_newest_version(requirement_name: str) -> str:
     from urllib.error import HTTPError
 
     try:
-
         DEFAULT_PIP_INDEX = os.environ.get("PIP_INDEX_URL", "https://pypi.org/pypi/")
 
         def get_charset(headers, default: str = "utf-8"):
@@ -141,12 +155,26 @@ def get_newest_version(requirement_name: str) -> str:
 
         def get_versions_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
             data = get_data_pypi(name, index)
-            version_numbers = sorted(data["releases"], key=parse_version)
+            version_numbers = sorted(data["releases"], key=pkg_resources.safe_version)
             return tuple(version_numbers)
 
         return parse_version(get_versions_pypi(requirement_name)[-1])
     except HTTPError:
         return None
+
+
+if False:  # may no be needed anymore use pkg_resources.safe_version instead
+
+    @passes_kws_to(pkg_resources.parse_version)
+    def catching_parse_version(
+        *args, drop_invalid_versions: bool = True, **kwargs
+    ) -> Version:
+        try:
+            return pkg_resources.parse_version(*args, **kwargs)
+        except InvalidVersion as e:
+            if drop_invalid_versions:
+                return Version()
+            raise e
 
 
 def pip_freeze_list() -> List:
@@ -157,25 +185,21 @@ def is_requirement_updatable(requirement_name: str) -> bool:
     if not is_requirement_installed(requirement_name):
         return True
 
+    current_version = get_installed_version(requirement_name)
+
+    if current_version == "Broken":
+        return True
+
     if requirement_has_version(requirement_name):
-        if get_requirement_version(requirement_name) != get_installed_version(
-            requirement_name
-        ):
+        if get_requirement_version(requirement_name) != current_version:
             return True
 
     s = get_newest_version(requirement_name)
     if s:
-        if s > get_installed_version(requirement_name):
+        if s > current_version:
             return True
 
     return False
-
-
-SP_CALLABLE = subprocess.check_call  # subprocess.call
-
-
-# subprocess.Popen(**ADDITIONAL_PIPE_KWS)
-# ADDITIONAL_PIPE_KWS =  dict(stderr=subprocess.PIPE,stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
 
 def install_requirements_from_name(*requirements_name: Iterable[str]) -> None:
@@ -201,7 +225,6 @@ def install_requirements_from_name(*requirements_name: Iterable[str]) -> None:
         SP_CALLABLE(["pip"] + args)
 
     elif True:
-
         interpreter = Path(sys.executable)
         SP_CALLABLE([str(interpreter), "-m", "pip"] + args)
 
@@ -231,19 +254,6 @@ def remove_requirements_from_name(*requirements_name: Iterable[str]) -> None:
             )  # figure out which python!
 
 
-if __name__ == "__main__":
-    print(
-        get_newest_version("warg"),
-        get_installed_version("warg"),
-        get_newest_version("warg") == get_installed_version("warg"),
-    )
-
-    install_requirements_from_name("that")
-    remove_requirements_from_name("that")
-
-from .. import MANUAL_REQUIREMENTS
-
-
 def is_package_up_to_date(query: str) -> bool:
     return is_requirement_updatable(query)
 
@@ -257,6 +267,8 @@ def is_package_updatable(query: str) -> bool:
 
 
 def is_manual(query: str) -> bool:
+    from .. import MANUAL_REQUIREMENTS
+
     return query in MANUAL_REQUIREMENTS
 
 
@@ -266,8 +278,11 @@ def append_item_state(query: str) -> str:
     if is_manual(query):
         out = f"{out} (Manual)"
 
-    if not is_package_installed(query):
+    if get_installed_version(query) == "Broken":
+        out = f"{out} (Broken)"
+    elif not is_package_installed(query):
         out = f"{out} (Not Installed)"
+
     elif is_package_updatable(query):
         out = f"{out} (Updatable)"
 
@@ -279,6 +294,7 @@ def strip_item_state(query: str) -> str:
         query.replace("(Not Installed)", "")
         .replace("(Updatable)", "")
         .replace("(Manual)", "")
+        .replace("(Broken)", "")
         .strip()
     )
 
@@ -289,3 +305,13 @@ if __name__ == "__main__":
         print(is_package_updatable("warg"))
 
     _main()
+
+    def ia():
+        print(
+            get_newest_version("warg"),
+            get_installed_version("warg"),
+            get_newest_version("warg") == get_installed_version("warg"),
+        )
+
+        install_requirements_from_name("that")
+        remove_requirements_from_name("that")

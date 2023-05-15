@@ -44,7 +44,6 @@ def restore_default_project_settings(
 
 
 def store_project_setting(key: str, value: Any, *, project_name: str = PROJECT_NAME):
-
     if isinstance(value, bool):
         qgis_project.writeEntryBool(project_name, key, value)
     elif isinstance(value, float):
@@ -232,7 +231,6 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
                 n = append_item_state(l)
 
                 if len(self.environment_list_model.findItems(n)) < 1:
-
                     item = QStandardItem(n)
                     item.setCheckable(True)
                     if False:
