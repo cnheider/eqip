@@ -1,3 +1,6 @@
+import codecs
+import configparser
+import os
 from pathlib import Path
 
 import qgis
@@ -37,17 +40,17 @@ def findPlugins(path: Path):
     for plugin in path.glob("*"):
         if plugin.is_dir():
             continue
-        if not os.path.exists(os.path.join(plugin, "__init__.py")):
+        if not (plugin / "__init__.py").exists():
             continue
 
-        metadataFile = os.path.join(plugin, "metadata.txt")
-        if not os.path.exists(metadataFile):
+        metadataFile = plugin / "metadata.txt"
+        if not metadataFile.exists():
             continue
 
         cp = configparser.ConfigParser()
 
         try:
-            with codecs.open(metadataFile, "r", "utf8") as f:
+            with codecs.open(str(metadataFile), "r", "utf8") as f:
                 cp.read_file(f)
         except:
             cp = None
