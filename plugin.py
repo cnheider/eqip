@@ -16,6 +16,7 @@ from qgis.core import QgsSettings
 
 from .qpip import PLUGIN_DIR, PROJECT_NAME
 from .qpip.configuration.options import QPipOptionsPageFactory
+from .qpip.plugins.hook import add_plugin_dep_hook
 
 # noinspection PyUnresolvedReferences
 from .resources import *  # Initialize Qt resources from file resources.py

@@ -29,6 +29,7 @@ from .piper import (
 )
 from .project_settings import DEFAULT_PROJECT_SETTINGS
 from .. import MANUAL_REQUIREMENTS, PLUGIN_DIR, PROJECT_NAME, VERSION
+from ..plugins.hook import add_plugin_dep_hook, remove_plugin_dep_hook
 from ..utilities import resolve_path
 
 qgis_project = QgsProject.instance()
@@ -132,6 +133,9 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.title_label.setText("qpip")
         self.sponsor_label.setPixmap(QtGui.QPixmap(resolve_path("icons/pypi.png")))
         self.version_label.setText(f"{VERSION}")
+
+        self.enable_button.clicked.connect(add_plugin_dep_hook)
+        self.disable_button.clicked.connect(remove_plugin_dep_hook)
 
         self.refresh_button.clicked.connect(self.populate_requirements)
 

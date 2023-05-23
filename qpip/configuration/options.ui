@@ -98,7 +98,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="requirements_tab">
       <property name="sizePolicy">
@@ -186,6 +186,27 @@
         <widget class="QPushButton" name="update_environment_button">
          <property name="text">
           <string>Apply</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="options_tab">
+      <attribute name="title">
+       <string>Options</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QPushButton" name="enable_button">
+         <property name="text">
+          <string>Enable</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="disable_button">
+         <property name="text">
+          <string>Disable</string>
          </property>
         </widget>
        </item>

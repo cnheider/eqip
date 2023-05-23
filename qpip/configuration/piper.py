@@ -7,7 +7,14 @@ __doc__ = r"""
            Created on 12/19/22
            """
 
-__all__ = ["install_requirements_from_file", "install_requirements_from_name"]
+__all__ = [
+    "install_requirements_from_file",
+    "install_requirements_from_name",
+    "append_item_state",
+    "is_package_installed",
+    "remove_requirements_from_name",
+    "strip_item_state",
+]
 
 import cgi
 import subprocess
@@ -19,13 +26,27 @@ from typing import Iterable, List, Tuple, Optional, Union
 
 import pkg_resources
 from pkg_resources.extern.packaging.version import InvalidVersion, Version
-from warg import passes_kws_to
+
 
 SP_CALLABLE = subprocess.check_call  # subprocess.call
 
 
 # subprocess.Popen(**ADDITIONAL_PIPE_KWS)
 # ADDITIONAL_PIPE_KWS =  dict(stderr=subprocess.PIPE,stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+
+if False:  # may no be needed anymore use pkg_resources.safe_version instead
+    from warg import passes_kws_to
+
+    @passes_kws_to(pkg_resources.parse_version)
+    def catching_parse_version(
+        *args, drop_invalid_versions: bool = True, **kwargs
+    ) -> Version:
+        try:
+            return pkg_resources.parse_version(*args, **kwargs)
+        except InvalidVersion as e:
+            if drop_invalid_versions:
+                return Version()
+            raise e
 
 
 def install_requirements_from_file(requirements_path: Path) -> None:
@@ -161,20 +182,6 @@ def get_newest_version(requirement_name: str) -> str:
         return parse_version(get_versions_pypi(requirement_name)[-1])
     except HTTPError:
         return None
-
-
-if False:  # may no be needed anymore use pkg_resources.safe_version instead
-
-    @passes_kws_to(pkg_resources.parse_version)
-    def catching_parse_version(
-        *args, drop_invalid_versions: bool = True, **kwargs
-    ) -> Version:
-        try:
-            return pkg_resources.parse_version(*args, **kwargs)
-        except InvalidVersion as e:
-            if drop_invalid_versions:
-                return Version()
-            raise e
 
 
 def pip_freeze_list() -> List:
