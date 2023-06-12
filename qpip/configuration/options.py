@@ -123,7 +123,6 @@ class QPipOptionsPageFactory(QgsOptionsWidgetFactory):
 
 OptionWidget, OptionWidgetBase = uic.loadUiType(resolve_path("options.ui", __file__))
 
-
 class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
