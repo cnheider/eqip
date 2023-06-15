@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
- qpip
+ eqip
 
                               -------------------
         begin                : 2022-05-23
@@ -11,21 +11,26 @@
 """
 import warnings
 
+import pkg_resources
 from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
 from qgis.core import QgsSettings
 
-from .qpip import PLUGIN_DIR, PROJECT_NAME
-from .qpip.configuration.options import QPipOptionsPageFactory
-from .qpip.plugins.hook import add_plugin_dep_hook
-
 # noinspection PyUnresolvedReferences
 from .resources import *  # Initialize Qt resources from file resources.py
+
+from .eqip import PLUGIN_DIR, PROJECT_NAME
+from .eqip.configuration.options import EqipOptionsPageFactory, read_project_setting
+from .eqip.configuration.piper import install_requirements_from_name
+from .eqip.configuration.project_settings import DEFAULT_PROJECT_SETTINGS
+
+# from .eqip.plugins.hook import add_plugin_dep_hook
+
 
 MENU_INSTANCE_NAME = f"&{PROJECT_NAME.lower()}"
 VERBOSE = False
 
 
-class QPip:
+class Eqip:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -60,7 +65,24 @@ class QPip:
 
         self.menu = self.tr(MENU_INSTANCE_NAME)
 
-        self.options_factory = QPipOptionsPageFactory()
+        self.options_factory = EqipOptionsPageFactory()
+
+        if False:
+            with open((PLUGIN_DIR / "eqip" / "requirements.txt")) as f:
+                install_requirements_from_name(
+                    *[
+                        r.project_name
+                        for r in pkg_resources.parse_requirements(f.readlines())
+                    ]
+                )
+
+            if read_project_setting(
+                "AUTO_ENABLE_DEP_HOOK",
+                defaults=DEFAULT_PROJECT_SETTINGS,
+                project_name=PROJECT_NAME,
+            ):
+                ...
+                # add_plugin_dep_hook()
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads

@@ -17,7 +17,7 @@ import unittest
 from qgis.PyQt.QtGui import QIcon
 
 
-class QPipDialogTest(unittest.TestCase):
+class EqipDialogTest(unittest.TestCase):
     """Test resources work."""
 
     def setUp(self):
@@ -30,12 +30,12 @@ class QPipDialogTest(unittest.TestCase):
 
     def test_icon_png(self):
         """Test we can click OK."""
-        path = ":/plugins/qpip/icon.png"
+        path = ":/plugins/eqip/icon.png"
         icon = QIcon(path)
         self.assertFalse(icon.isNull())
 
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(QPipResourcesTest)
+    suite = unittest.makeSuite(EqipResourcesTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)

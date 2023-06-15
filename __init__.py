@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
- qpip
+ eqip
 
                              -------------------
         begin                : 2022-05-23
@@ -13,12 +13,12 @@
 
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name
-    """Load qpip class from file qpip.
+    """Load eqip class from file eqip.
 
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
     #
-    from .plugin import QPip
+    from .plugin import Eqip
 
-    return QPip(iface)
+    return Eqip(iface)

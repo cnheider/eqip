@@ -1,6 +1,6 @@
 ![icon](icon.png)
 
-# QPip (Maybe Eqip instead?)
+# Eqip (Maybe Eqip instead?)
 
 Install pip package for within QGIS.
 
@@ -11,7 +11,7 @@ Install pip package for within QGIS.
 
 First, you need to install the following dependencies:
 
-see [qpip/requirements.txt](qpip/requirements.txt)
+see [eqip/requirements.txt](eqip/requirements.txt)
 
 Hereafter you have the following options:
 
@@ -37,4 +37,4 @@ Open Qgis and go to Plugins > Add > Repository > URL: http://10.0.52.7:5000/qgis
 
 Click Ok
 
-Navigate to All plugins find Qpip and install 
+Navigate to All plugins find Eqip and install 

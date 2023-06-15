@@ -2,12 +2,19 @@ import codecs
 import configparser
 import os
 from pathlib import Path
+from typing import Tuple
 
 import qgis
 
 from qgis.core import QgsProviderRegistry
 import pyplugin_installer
 from warg import pre_decorate
+
+
+__all__ = ["add_plugin_dep_hook", "remove_plugin_dep_hook", "find_qgis_plugins"]
+
+__doc__ = r"""This assume that pyplugin_installer.instance().processDependencies, exists and get called when a new 
+plugin is added"""
 
 
 class PluginProcessDependenciesHook:
@@ -25,7 +32,7 @@ HOOK = None
 ORIGINAL_PROCESS_DEP_FUNC = None
 
 
-def add_plugin_dep_hook():
+def add_plugin_dep_hook() -> PluginProcessDependenciesHook:
     """ """
     global ORIGINAL_PROCESS_DEP_FUNC, HOOK
     if HOOK is None:
@@ -37,9 +44,10 @@ def add_plugin_dep_hook():
         pyplugin_installer.instance().processDependencies = pre_decorate(
             pyplugin_installer.instance().processDependencies, HOOK
         )
+    return HOOK
 
 
-def remove_plugin_dep_hook():
+def remove_plugin_dep_hook() -> None:
     global HOOK
     if HOOK is not None:
         print("removed plugin hook")
@@ -49,7 +57,7 @@ def remove_plugin_dep_hook():
         HOOK = None
 
 
-def find_qgis_plugins(path: Path):
+def find_qgis_plugins(path: Path) -> Tuple:
     """for internal use: return list of plugins in given path"""
     for plugin in path.glob("*"):
         if plugin.is_dir():
@@ -57,20 +65,20 @@ def find_qgis_plugins(path: Path):
         if not (plugin / "__init__.py").exists():
             continue
 
-        metadataFile = plugin / "metadata.txt"
-        if not metadataFile.exists():
+        metadata_file = plugin / "metadata.txt"
+        if not metadata_file.exists():
             continue
 
         cp = configparser.ConfigParser()
 
         try:
-            with codecs.open(str(metadataFile), "r", "utf8") as f:
+            with codecs.open(str(metadata_file), "r", "utf8") as f:
                 cp.read_file(f)
         except:
             cp = None
 
-        pluginName = os.path.basename(plugin)
-        yield (pluginName, cp)
+        plugin_name = os.path.basename(plugin)
+        yield (plugin_name, cp)
 
 
 if __name__ == "__main__":

@@ -21,13 +21,13 @@ def test_mac():
     user = Path.home().name
 
     truth = Path(
-        f"/Users/{user}/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/qpip"
+        f"/Users/{user}/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/eqip"
     )
 
     default_profile = "default"
     b = qgis_app.user_data
 
-    target_folder = b / "profiles" / default_profile / "python" / "plugins" / "qpip"
+    target_folder = b / "profiles" / default_profile / "python" / "plugins" / "eqip"
     assert (
         truth.absolute() == target_folder.absolute()
     ), f"{truth.absolute(), target_folder.absolute()}"

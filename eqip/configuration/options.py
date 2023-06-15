@@ -3,15 +3,16 @@
 
 __author__ = "heider"
 __doc__ = r"""
-            TODO: Extract qpip specific code from this file.
+            TODO: Extract eqip specific code from this file.
            Created on 5/5/22
            """
 
-__all__ = ["QPipOptionsPage", "QPipOptionsPageFactory"]
+__all__ = ["EqipOptionsPage", "EqipOptionsPageFactory"]
 
 from logging import warning
 from typing import Any, Mapping, Optional
 
+from jord import qgis_utilities
 import pkg_resources
 from PyQt5.QtCore import Qt
 from qgis.PyQt import QtGui, uic
@@ -19,7 +20,7 @@ from qgis.PyQt.QtGui import QIcon, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
 from qgis.core import QgsProject
 from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
-
+from warg import reload_module
 from .piper import (
     append_item_state,
     install_requirements_from_name,
@@ -33,6 +34,8 @@ from ..plugins.hook import add_plugin_dep_hook, remove_plugin_dep_hook
 from ..utilities import resolve_path
 
 qgis_project = QgsProject.instance()
+
+VERBOSE = False
 
 
 def restore_default_project_settings(
@@ -105,7 +108,7 @@ def read_project_setting(
     return val
 
 
-class QPipOptionsPageFactory(QgsOptionsWidgetFactory):
+class EqipOptionsPageFactory(QgsOptionsWidgetFactory):
     def __init__(self):
         super().__init__()
 
@@ -118,39 +121,77 @@ class QPipOptionsPageFactory(QgsOptionsWidgetFactory):
         return QIcon(f"{icon_path}/icon.png")
 
     def createWidget(self, parent):
-        return QPipOptionsPage(parent)
+        return EqipOptionsPage(parent)
 
 
 OptionWidget, OptionWidgetBase = uic.loadUiType(resolve_path("options.ui", __file__))
 
-class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
+
+class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
 
         self.icon_label.setPixmap(QtGui.QPixmap(resolve_path("icons/snake_bird.png")))
-        self.title_label.setText("qpip")
+        self.title_label.setText("Eqip")
         self.sponsor_label.setPixmap(QtGui.QPixmap(resolve_path("icons/pypi.png")))
         self.version_label.setText(f"{VERSION}")
 
-        self.enable_button.clicked.connect(add_plugin_dep_hook)
-        self.disable_button.clicked.connect(remove_plugin_dep_hook)
+        if VERBOSE:  # TODO: Auto-reload development installs
+            reload_module("jord")
+            reload_module("warg")
+            reload_module("apppath")
 
-        self.refresh_button.clicked.connect(self.populate_requirements)
+        qgis_utilities.reconnect_signal(
+            self.enable_dep_hook_button.clicked, self.on_enable_hook
+        )
+        qgis_utilities.reconnect_signal(
+            self.disable_dep_hook_button.clicked, self.on_disable_hook
+        )
+        s = read_project_setting(
+            "AUTO_ENABLE_DEP_HOOK",
+            defaults=DEFAULT_PROJECT_SETTINGS,
+            project_name=PROJECT_NAME,
+        )
+        self.auto_enable_check_box.setCheckState(Qt.Checked)
+        qgis_utilities.reconnect_signal(
+            self.auto_enable_check_box.stateChanged, self.on_auto_enable_changed
+        )
 
-        self.install_requirements_button.clicked.connect(self.on_install_requirement)
+        qgis_utilities.reconnect_signal(
+            self.refresh_button.clicked, self.populate_requirements
+        )
+
+        qgis_utilities.reconnect_signal(
+            self.install_requirements_button.clicked, self.on_install_requirement
+        )
         self.populate_requirements()
 
         # self.requirements_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
 
-        self.populate_environment_button.clicked.connect(
-            self.on_populate_environment
+        qgis_utilities.reconnect_signal(
+            self.populate_environment_button.clicked, self.on_populate_environment
         )  # May be slow
-        self.update_environment_button.clicked.connect(self.on_update_environment)
+        qgis_utilities.reconnect_signal(
+            self.update_environment_button.clicked, self.on_update_environment
+        )
 
         # self.environment_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
+
+    def on_auto_enable_changed(self, state):
+        store_project_setting("AUTO_ENABLE_DEP_HOOK", state, project_name=PROJECT_NAME)
+
+    def on_enable_hook(self):
+        self.enable_dep_hook_button.setEnabled(False)
+        self.disable_dep_hook_button.setEnabled(True)
+        add_plugin_dep_hook()
+
+    def on_disable_hook(self):
+        self.enable_dep_hook_button.setEnabled(True)
+        self.disable_dep_hook_button.setEnabled(False)
+        remove_plugin_dep_hook()
 
     def on_install_requirement(self):
         pkgs_to_be_installed = []
@@ -172,7 +213,7 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
             strc = ",\n".join(pkgs_to_be_installed)
             QMessageBox.information(
                 self,
-                "qpip",
+                "eqip",
                 f"Updated Python Dependencies:\n{strc}",
             )
 
@@ -182,7 +223,7 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
             strd = ",\n".join(pkgs_to_be_removed)
             QMessageBox.information(
                 self,
-                "qpip",
+                "eqip",
                 f"Removed Python Dependencies:\n{strd}",
             )
 
@@ -194,7 +235,7 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
 
         self.requirements_list_model = QStandardItemModel(self.requirements_list_view)
 
-        with open((PLUGIN_DIR / "qpip" / "requirements.txt")) as f:
+        with open((PLUGIN_DIR / "eqip" / "requirements.txt")) as f:
             for r in pkg_resources.parse_requirements(f.readlines()):
                 item = QStandardItem(append_item_state(r.name))
 
@@ -261,20 +302,20 @@ class QPipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.populate_requirements()
 
 
-class QPipOptionsPage(QgsOptionsPageWidget):
+class EqipOptionsPage(QgsOptionsPageWidget):
     def __init__(self, parent):
         super().__init__(parent)
         root_layout = QHBoxLayout()
         root_layout.setContentsMargins(0, 0, 0, 0)
-        self.options_widget = QPipOptionsWidget()
+        self.options_widget = EqipOptionsWidget()
         root_layout.addWidget(self.options_widget)
 
         if False:
             root_layout.addWidget(
                 QMessageBox(
                     QMessageBox.Information,
-                    "qpip",
-                    "qpip is a plugin for QGIS that allows you to manage python requirements using pip.\n",
+                    "eqip",
+                    "eqip is a plugin for QGIS that allows you to manage python requirements using pip.\n",
                 )
             )
 

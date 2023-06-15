@@ -2,7 +2,7 @@
 # This file should be included when you package your plugin.
 # Mandatory items:
 [general]
-name=Qpip
+name=Eqip
 qgisMinimumVersion=3.0
 description=Qgis Pip Management
 version=0.0.1

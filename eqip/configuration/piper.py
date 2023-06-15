@@ -20,16 +20,16 @@ import cgi
 import subprocess
 import sys
 from pathlib import Path
-
-
-from typing import Iterable, List, Tuple, Optional, Union
+from typing import Iterable, List, Tuple, Optional, Union, Any
 
 import pkg_resources
 from pkg_resources.extern.packaging.version import InvalidVersion, Version
 
+# from warg import is_windows # avoid dependency import not standard python pkgs.
+CUR_OS = sys.platform
+IS_WIN = any(CUR_OS.startswith(i) for i in ["win32", "cygwin"])
 
 SP_CALLABLE = subprocess.check_call  # subprocess.call
-
 
 # subprocess.Popen(**ADDITIONAL_PIPE_KWS)
 # ADDITIONAL_PIPE_KWS =  dict(stderr=subprocess.PIPE,stdout=subprocess.PIPE, stdin=subprocess.PIPE)
@@ -47,6 +47,14 @@ if False:  # may no be needed anymore use pkg_resources.safe_version instead
             if drop_invalid_versions:
                 return Version()
             raise e
+
+
+def get_qgis_python_interpreter_path() -> Path:
+    interpreter_path = Path(sys.executable)
+    if IS_WIN:  # For OSGeo4W
+        return interpreter_path.parent / "python.exe"
+
+    return interpreter_path
 
 
 def install_requirements_from_file(requirements_path: Path) -> None:
@@ -71,7 +79,7 @@ def install_requirements_from_file(requirements_path: Path) -> None:
         SP_CALLABLE(["pip"] + args)
 
     elif True:
-        SP_CALLABLE(["python", "-m", "pip"] + args)
+        SP_CALLABLE([str(get_qgis_python_interpreter_path()), "-m", "pip", *args])
 
 
 def is_requirement_installed(requirement_name: str) -> bool:
@@ -88,10 +96,10 @@ def is_requirement_installed(requirement_name: str) -> bool:
 
 
 def requirement_has_version(requirement_name: str) -> bool:
-    return get_requirement_version(requirement_name) != None
+    return get_requirement_version(requirement_name) is not None
 
 
-def get_requirement_version(requirement_name: str) -> str:
+def get_requirement_version(requirement_name: str) -> Optional[str]:
     s = requirement_name.split("==")
     if len(s) == 2:
         return s[-1]
@@ -128,7 +136,7 @@ def get_installed_version(
     return None
 
 
-def get_newest_version(requirement_name: str) -> str:
+def get_newest_version(requirement_name: str) -> Optional[Any]:
     from pkg_resources import parse_version
     import os
     import json
@@ -209,31 +217,34 @@ def is_requirement_updatable(requirement_name: str) -> bool:
     return False
 
 
-def install_requirements_from_name(*requirements_name: Iterable[str]) -> None:
+def install_requirements_from_name(
+    *requirements_name: Iterable[str], upgrade: bool = True
+) -> None:
     """
     Install requirements from names.
 
     :param requirements_name: Name of requirements.
+    :param upgrade: Whether to upgrade already installed packages
     """
     # pip.main(["install", "pip", "--upgrade"]) # REQUIRES RESTART OF QGIS
 
     # if isinstance(requirements_name, Iterable) and len(requirements_name)==1:
     # ... # handle wrong input format
 
-    args = ["install", *requirements_name, "--upgrade"]
+    args = ["install", *requirements_name]
     # args = ["install", "rasterio", "--upgrade"] # RASTERIO for window DOES NOT WORK ATM, should be installed manually
+
+    if upgrade:
+        args += ["--upgrade"]
 
     if False:
         import pip
 
         pip.main(args)
-
     elif False:
         SP_CALLABLE(["pip"] + args)
-
     elif True:
-        interpreter = Path(sys.executable)
-        SP_CALLABLE([str(interpreter), "-m", "pip"] + args)
+        SP_CALLABLE([str(get_qgis_python_interpreter_path()), "-m", "pip", *args])
 
 
 def remove_requirements_from_name(*requirements_name: Iterable[str]) -> None:
