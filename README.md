@@ -1,6 +1,6 @@
 ![icon](icon.png)
 
-# Eqip (Maybe Eqip instead?)
+# Eqip
 
 Install pip package for within QGIS.
 

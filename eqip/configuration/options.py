@@ -12,9 +12,9 @@ __all__ = ["EqipOptionsPage", "EqipOptionsPageFactory"]
 from logging import warning
 from typing import Any, Mapping, Optional
 
-from jord import qgis_utilities
 import pkg_resources
 from PyQt5.QtCore import Qt
+from jord.qgis_utilities import reconnect_signal
 from qgis.PyQt import QtGui, uic
 from qgis.PyQt.QtGui import QIcon, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
@@ -142,10 +142,10 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             reload_module("warg")
             reload_module("apppath")
 
-        qgis_utilities.reconnect_signal(
+        reconnect_signal(
             self.enable_dep_hook_button.clicked, self.on_enable_hook
         )
-        qgis_utilities.reconnect_signal(
+        reconnect_signal(
             self.disable_dep_hook_button.clicked, self.on_disable_hook
         )
         s = read_project_setting(
@@ -153,32 +153,44 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             defaults=DEFAULT_PROJECT_SETTINGS,
             project_name=PROJECT_NAME,
         )
-        self.auto_enable_check_box.setCheckState(Qt.Checked)
-        qgis_utilities.reconnect_signal(
+        self.auto_enable_check_box.setCheckState(Qt.Checked) # TODO: IMPLEMENT WITH READ_PROJECT_SETTING
+
+        reconnect_signal(
             self.auto_enable_check_box.stateChanged, self.on_auto_enable_changed
         )
 
-        qgis_utilities.reconnect_signal(
+        reconnect_signal(
             self.refresh_button.clicked, self.populate_requirements
         )
 
-        qgis_utilities.reconnect_signal(
+        reconnect_signal(
             self.install_requirements_button.clicked, self.on_install_requirement
         )
+
+        self.plugin_selection_combo_box.clear()
+        self.plugin_selection_combo_box.addItems(['eqip','qlive'])
+        self.plugin_selection_combo_box.setCurrentIndex(0)
+        self.plugin_selection_combo_box.setEditable(False)
+        reconnect_signal(self.plugin_selection_combo_box.currentTextChanged,            self.on_select_plugin        )
+
         self.populate_requirements()
 
         # self.requirements_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
 
-        qgis_utilities.reconnect_signal(
+        reconnect_signal(
             self.populate_environment_button.clicked, self.on_populate_environment
         )  # May be slow
-        qgis_utilities.reconnect_signal(
+        reconnect_signal(
             self.update_environment_button.clicked, self.on_update_environment
         )
 
         # self.environment_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
+
+    def on_select_plugin(self,value):
+        ...
+        #self.populate_requirements()
 
     def on_auto_enable_changed(self, state):
         store_project_setting("AUTO_ENABLE_DEP_HOOK", state, project_name=PROJECT_NAME)

@@ -98,7 +98,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="requirements_tab">
       <property name="sizePolicy">
@@ -111,6 +111,9 @@
        <string>Requirements</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_11">
+       <item>
+        <widget class="QComboBox" name="plugin_selection_combo_box"/>
+       </item>
        <item>
         <widget class="QListView" name="requirements_list_view">
          <property name="editTriggers">

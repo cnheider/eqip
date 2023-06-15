@@ -2,7 +2,7 @@ from pathlib import Path
 
 from apppath import AppPath
 
-PROJECT_NAME = "eqip"
+PROJECT_NAME = "Eqip"
 PLUGIN_DIR = Path(__file__).parent.parent
 VERSION = "0.0.1"
 PLUGIN_AUTHOR = "Heider"
