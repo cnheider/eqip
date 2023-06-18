@@ -20,7 +20,7 @@ homepage=https://github.com/cnheider/eqip
 icon=icon.png
 
 # Tags are comma separated with spaces allowed
-tags=python, ortho, photos
+tags=python
 category=Plugins
 #Category of the plugin: Raster, Vector, Database or Web
 

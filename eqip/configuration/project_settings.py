@@ -2,6 +2,6 @@ from .. import PROJECT_NAME
 from PyQt5.QtCore import Qt
 
 DEFAULT_PROJECT_SETTINGS = {
-    "RESOURCES_BASE_PATH": f":/plugins/{PROJECT_NAME}",
+    "RESOURCES_BASE_PATH": f":/plugins/{PROJECT_NAME.lower()}",
     "AUTO_ENABLE_DEP_HOOK": Qt.Checked,
 }

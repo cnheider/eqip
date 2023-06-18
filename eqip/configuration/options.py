@@ -9,10 +9,12 @@ __doc__ = r"""
 
 __all__ = ["EqipOptionsPage", "EqipOptionsPageFactory"]
 
+from itertools import count
 from logging import warning
 from typing import Any, Mapping, Optional
 
 import pkg_resources
+import qgis
 from PyQt5.QtCore import Qt
 from jord.qgis_utilities import reconnect_signal
 from qgis.PyQt import QtGui, uic
@@ -21,6 +23,7 @@ from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
 from qgis.core import QgsProject
 from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
 from warg import reload_module
+
 from .piper import (
     append_item_state,
     install_requirements_from_name,
@@ -30,6 +33,7 @@ from .piper import (
 )
 from .project_settings import DEFAULT_PROJECT_SETTINGS
 from .. import MANUAL_REQUIREMENTS, PLUGIN_DIR, PROJECT_NAME, VERSION
+from ..plugins import has_requirements_file
 from ..plugins.hook import add_plugin_dep_hook, remove_plugin_dep_hook
 from ..utilities import resolve_path
 
@@ -118,7 +122,7 @@ class EqipOptionsPageFactory(QgsOptionsWidgetFactory):
             defaults=DEFAULT_PROJECT_SETTINGS,
             project_name=PROJECT_NAME,
         )
-        return QIcon(f"{icon_path}/icon.png")
+        return QIcon(f"{icon_path}/icons/snake_bird.png")
 
     def createWidget(self, parent):
         return EqipOptionsPage(parent)
@@ -141,56 +145,67 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             reload_module("jord")
             reload_module("warg")
             reload_module("apppath")
+            # reload_requirements(PLUGIN_DIR/requirements.txt)
 
-        reconnect_signal(
-            self.enable_dep_hook_button.clicked, self.on_enable_hook
-        )
-        reconnect_signal(
-            self.disable_dep_hook_button.clicked, self.on_disable_hook
-        )
-        s = read_project_setting(
+        reconnect_signal(self.enable_dep_hook_button.clicked, self.on_enable_hook)
+        reconnect_signal(self.disable_dep_hook_button.clicked, self.on_disable_hook)
+        s = read_project_setting(  # TODO: Use value below
             "AUTO_ENABLE_DEP_HOOK",
             defaults=DEFAULT_PROJECT_SETTINGS,
             project_name=PROJECT_NAME,
         )
-        self.auto_enable_check_box.setCheckState(Qt.Checked) # TODO: IMPLEMENT WITH READ_PROJECT_SETTING
+        self.auto_enable_check_box.setCheckState(
+            Qt.Checked
+        )  # TODO: IMPLEMENT WITH READ_PROJECT_SETTING
 
         reconnect_signal(
             self.auto_enable_check_box.stateChanged, self.on_auto_enable_changed
         )
-
-        reconnect_signal(
-            self.refresh_button.clicked, self.populate_requirements
-        )
-
+        reconnect_signal(self.refresh_button.clicked, self.populate_requirements)
         reconnect_signal(
             self.install_requirements_button.clicked, self.on_install_requirement
         )
 
-        self.plugin_selection_combo_box.clear()
-        self.plugin_selection_combo_box.addItems(['eqip','qlive'])
-        self.plugin_selection_combo_box.setCurrentIndex(0)
-        self.plugin_selection_combo_box.setEditable(False)
-        reconnect_signal(self.plugin_selection_combo_box.currentTextChanged,            self.on_select_plugin        )
+        if True:  # TODO: Add option for also showing inactive plugins
+            self.active_plugins = {
+                i: name
+                for i, (name, obj) in zip(count(), qgis.utils.plugins.items())
+                if has_requirements_file(name)
+            }
+            self.plugin_selection_combo_box.clear()
+            self.plugin_selection_combo_box.addItems([*self.active_plugins.values()])
+            self.plugin_selection_combo_box.setCurrentIndex(0)
+            self.plugin_selection_combo_box.setEditable(False)
+            reconnect_signal(
+                self.plugin_selection_combo_box.currentTextChanged,
+                self.on_select_plugin,
+            )
+            if len(self.active_plugins):
+                self.selected_plugin = next(iter(self.active_plugins.values()))
 
-        self.populate_requirements()
+            self.populate_requirements()
 
         # self.requirements_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
 
         reconnect_signal(
             self.populate_environment_button.clicked, self.on_populate_environment
-        )  # May be slow
+        )
         reconnect_signal(
             self.update_environment_button.clicked, self.on_update_environment
         )
 
+        reconnect_signal(self.reset_options_button.clicked, self.on_reset_options)
+
         # self.environment_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
 
-    def on_select_plugin(self,value):
-        ...
-        #self.populate_requirements()
+    def on_reset_options(self):
+        restore_default_project_settings()
+
+    def on_select_plugin(self, value):
+        self.selected_plugin = value  # self.active_plugins[value]
+        self.populate_requirements()
 
     def on_auto_enable_changed(self, state):
         store_project_setting("AUTO_ENABLE_DEP_HOOK", state, project_name=PROJECT_NAME)
@@ -247,7 +262,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
 
         self.requirements_list_model = QStandardItemModel(self.requirements_list_view)
 
-        with open((PLUGIN_DIR / "eqip" / "requirements.txt")) as f:
+        with open((PLUGIN_DIR.parent / self.selected_plugin / "requirements.txt")) as f:
             for r in pkg_resources.parse_requirements(f.readlines()):
                 item = QStandardItem(append_item_state(r.name))
 
@@ -308,7 +323,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         # self.populate_environment()
 
     def on_populate_environment(self):
-        self.populate_environment()
+        self.populate_environment()  # May be slow
 
     def on_refresh_button_clicked(self):
         self.populate_requirements()

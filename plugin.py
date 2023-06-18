@@ -15,19 +15,21 @@ import pkg_resources
 from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
 from qgis.core import QgsSettings
 
-# noinspection PyUnresolvedReferences
-from .resources import *  # Initialize Qt resources from file resources.py
-
 from .eqip import PLUGIN_DIR, PROJECT_NAME
 from .eqip.configuration.options import EqipOptionsPageFactory, read_project_setting
 from .eqip.configuration.piper import install_requirements_from_name
 from .eqip.configuration.project_settings import DEFAULT_PROJECT_SETTINGS
+
+# noinspection PyUnresolvedReferences
+from .resources import *  # Initialize Qt resources from file resources.py
 
 # from .eqip.plugins.hook import add_plugin_dep_hook
 
 
 MENU_INSTANCE_NAME = f"&{PROJECT_NAME.lower()}"
 VERBOSE = False
+DEBUGGING = False
+DEBUGGING_PORT = 6969
 
 
 class Eqip:
@@ -49,6 +51,16 @@ class Eqip:
         locale = QgsSettings().value(
             f"{PROJECT_NAME}/locale/userLocale", QLocale().name()
         )
+
+        if DEBUGGING:
+            import pydevd_pycharm
+
+            pydevd_pycharm.settrace(
+                "localhost",
+                port=DEBUGGING_PORT,
+                stdoutToServer=True,
+                stderrToServer=True,
+            )
 
         if isinstance(locale, str):
             locale = locale[0:2]  # locale == "en"

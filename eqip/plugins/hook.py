@@ -1,9 +1,3 @@
-import codecs
-import configparser
-import os
-from pathlib import Path
-from typing import Tuple
-
 import qgis
 
 from qgis.core import QgsProviderRegistry
@@ -11,10 +5,35 @@ import pyplugin_installer
 from warg import pre_decorate
 
 
-__all__ = ["add_plugin_dep_hook", "remove_plugin_dep_hook", "find_qgis_plugins"]
+__all__ = ["add_plugin_dep_hook", "remove_plugin_dep_hook"]
 
 __doc__ = r"""This assume that pyplugin_installer.instance().processDependencies, exists and get called when a new 
 plugin is added"""
+
+from ..configuration.piper import install_requirements_from_file
+from .requirement_resolution import has_requirements_file, get_requirements_file_path
+
+VERBOSE = True
+HOOK_ART = """
+                                    
+                    ..              
+                    #+              
+                    =#              
+                    .-              
+                     =:             
+                     +:             
+                     =+             
+                     :#.            
+                      #-            
+            -         =*            
+            --        :*.           
+            +%-       :-.           
+           .*-        :=            
+            #+       -+.            
+            .++:...-+=.             
+               ::::.                
+                                    
+"""
 
 
 class PluginProcessDependenciesHook:
@@ -23,9 +42,19 @@ class PluginProcessDependenciesHook:
     """
 
     def __call__(self, *args, **kwargs):
-        print("_____________")
-        print(self, args, kwargs)
-        print("_____________")
+        plugin_name = args[0]
+        if has_requirements_file(plugin_name):
+            if VERBOSE:
+                print(self, args, kwargs, f"installing requirements for {plugin_name}")
+            install_requirements_from_file(get_requirements_file_path(plugin_name))
+        else:
+            if VERBOSE:
+                print(
+                    self,
+                    args,
+                    kwargs,
+                    f"Did not find any requirements for {plugin_name}",
+                )
 
 
 HOOK = None
@@ -40,6 +69,7 @@ def add_plugin_dep_hook() -> PluginProcessDependenciesHook:
         ORIGINAL_PROCESS_DEP_FUNC = pyplugin_installer.instance().processDependencies
 
         print("added plugin hook")
+        print(HOOK_ART)
 
         pyplugin_installer.instance().processDependencies = pre_decorate(
             pyplugin_installer.instance().processDependencies, HOOK
@@ -57,39 +87,7 @@ def remove_plugin_dep_hook() -> None:
         HOOK = None
 
 
-def find_qgis_plugins(path: Path) -> Tuple:
-    """for internal use: return list of plugins in given path"""
-    for plugin in path.glob("*"):
-        if plugin.is_dir():
-            continue
-        if not (plugin / "__init__.py").exists():
-            continue
-
-        metadata_file = plugin / "metadata.txt"
-        if not metadata_file.exists():
-            continue
-
-        cp = configparser.ConfigParser()
-
-        try:
-            with codecs.open(str(metadata_file), "r", "utf8") as f:
-                cp.read_file(f)
-        except:
-            cp = None
-
-        plugin_name = os.path.basename(plugin)
-        yield (plugin_name, cp)
-
-
 if __name__ == "__main__":
-
-    def asijdsa():
-        from qgis.utils import plugin_paths
-
-        for plugin_path in plugin_paths:
-            for plugin_id, parser in find_qgis_plugins(plugin_path):
-                if parser is None:
-                    continue
 
     def main():
         print(QgsProviderRegistry.instance().pluginList())

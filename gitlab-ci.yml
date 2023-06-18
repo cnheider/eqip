@@ -1,0 +1,299 @@
+stages:
+  - 🐍 lint
+  - 🤞 test
+  - 📦 build
+  - 🚀 deploy
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PROJECT_FOLDER: "french_locator_filter"
+  REPO_PLUGIN_URL: "https://oslandia.gitlab.io/qgis/french_locator_filter/"
+
+# Pip's cache doesn't store the python packages
+# https://pip.pypa.io/en/stable/reference/pip_install/#caching
+#
+# If you want to also cache the installed packages, you have to install
+# them in a virtualenv and cache it as well.
+cache:
+  key:
+    files:
+      - requirements/*.txt
+  paths:
+    - .cache/pip
+
+# -- LINT JOBS -------------------------------------------------------------------------
+git-hooks:
+  stage: 🐍 lint
+  image: python:3.9
+  tags:
+    - docker
+  variables:
+    PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
+  cache:
+    paths:
+      - ${PRE_COMMIT_HOME}
+  only:
+    refs:
+      - merge_requests
+  before_script:
+    - apt install git
+    - python3 -m pip install -U pip
+    - python3 -m pip install -U setuptools wheel
+    - python3 -m pip install -U -r requirements/development.txt
+    - pre-commit install
+    - git fetch origin
+  script:
+    - pre-commit run --from-ref "origin/$CI_DEFAULT_BRANCH" --to-ref "$CI_COMMIT_SHA";
+
+linter:
+  image: python:3.9-slim-buster
+  stage: 🐍 lint
+  tags:
+    - docker
+  only:
+    changes:
+      - "**/*.py"
+  before_script:
+    - python -m pip install -U flake8
+  script:
+    - flake8 $PROJECT_FOLDER --count --select=E9,F63,F7,F82 --show-source --statistics
+    - flake8 $PROJECT_FOLDER --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+# -- TEST JOBS -------------------------------------------------------------------------
+test-unit:
+  stage: 🤞 test
+  image: python:3.9-slim-buster
+  tags:
+    - docker
+  only:
+    changes:
+      - "**/*.py"
+      - ".gitlab-ci.yml"
+    refs:
+      - master
+      - merge_requests
+  before_script:
+    - python3 -m pip install -U -r requirements/development.txt
+    - python3 -m pip install -U -r requirements/testing.txt
+  script:
+    - env PYTHONPATH=/usr/share/qgis/python:. pytest -p no:qgis tests/unit --junitxml=junit/test-results-unit.xml --cov-report=xml:coverage-reports/coverage-unit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: junit/test-results-unit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage-reports/coverage-unit.xml
+
+test-qgis:
+  stage: 🤞 test
+  image: qgis/qgis:release-3_22
+  tags:
+    - docker
+  variables:
+    DISPLAY: ":1"
+    PYTHONPATH: "/usr/share/qgis/python/plugins:/usr/share/qgis/python:."
+  only:
+    changes:
+      - "**/*.py"
+      - ".gitlab-ci.yml"
+    refs:
+      - master
+      - merge_requests
+  before_script:
+    - python3 -m pip install -U -r requirements/testing.txt
+    - Xvfb :1 &
+  script:
+    - env PYTHONPATH=/usr/share/qgis/python:. pytest tests/qgis --junitxml=junit/test-results-qgis.xml --cov-report=xml:coverage-reports/coverage-qgis.xml
+  artifacts:
+    when: always
+    reports:
+      junit: junit/test-results-qgis.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage-reports/coverage-qgis.xml
+
+sonarcloud-check:
+  stage: 🤞 test
+  tags:
+    - docker
+  needs: [test-unit, test-qgis]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar" # Defines the location of the analysis task cache
+    GIT_DEPTH: "0" # Tells git to fetch all the branches of the project, required by the analysis task
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "Oslandia"  &&  ($CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == 'merge_request_event')
+      changes:
+        - "**/*.py"
+        - ".gitlab-ci.yml"
+
+# -- BUILD JOBS -------------------------------------------------------------------------
+build:translation:
+  stage: 📦 build
+  image: python:3.9-slim-buster
+  tags:
+    - docker
+  only:
+    refs:
+      - master
+      - tags
+  before_script:
+    - apt update
+    - apt install -y qttools5-dev-tools qt5-default g++
+    - python -m pip install -U pyqt5-tools
+  script:
+    - pylupdate5 -noobsolete -verbose $PROJECT_FOLDER/resources/i18n/plugin_translation.pro
+    - lrelease $PROJECT_FOLDER/resources/i18n/*.ts
+  artifacts:
+    name: ui-translation
+    paths:
+      - $PROJECT_FOLDER/resources/i18n/*qm
+    when: always
+
+builder:
+  stage: 📦 build
+  image: python:3.9
+  tags:
+    - docker
+  only:
+    refs:
+      - master
+      - tags
+  needs:
+    - build:translation
+  before_script:
+    - apt install git
+    - python -m pip install -U -r requirements/packaging.txt
+  script:
+    # Amend gitignore to include translation with qgis-plugin-ci
+    - sed -i "s|^*.qm.*| |" .gitignore
+    - git add $PROJECT_FOLDER/resources/i18n/*.qm
+
+    # Package the latest version listed in the changelog
+    - qgis-plugin-ci package latest --allow-uncommitted-changes --plugin-repo-url $REPO_PLUGIN_URL
+    - qgis-plugin-ci changelog latest >> release.md
+  artifacts:
+    name: "$PROJECT_FOLDER_b$CI_COMMIT_REF_NAME-c$CI_COMMIT_SHORT_SHA-j$CI_JOB_ID"
+    paths:
+      - "${PROJECT_FOLDER}.*.zip"
+      - plugins.xml
+      - release.md
+    expire_in: never
+
+documentation:
+  stage: 📦 build
+  image: python:3.9-slim-buster
+  tags:
+    - docker
+  only:
+    refs:
+      - master
+      - tags
+  before_script:
+    - python -m pip install -U -r requirements/documentation.txt
+  script:
+    - sphinx-build -b html -d docs/_build/cache -j auto docs target/docs
+  artifacts:
+    name: documentation
+    expose_as: "Built documentation static website"
+    paths:
+      - target/docs
+    when: always
+
+# -- DEPLOYMENT JOBS -------------------------------------------------------------------
+
+pages:
+  stage: 🚀 deploy
+  tags:
+    - docker
+  variables:
+    GIT_STRATEGY: none
+  only:
+    changes:
+      - "**/*.md"
+      - "**/*.rst"
+      - "**/*.ts"
+      - ".gitlab-ci.yml"
+      - "$PROJECT_FOLDER/**/*"
+      - requirements/documentation.txt
+      - requirements/packaging.txt
+    refs:
+      - master
+      - tags
+  needs:
+    - builder
+    - documentation
+  script:
+    - mkdir -p public
+    # copy generated plugin
+    - cp ${PROJECT_FOLDER}.*.zip public/
+    - cp plugins.xml public/
+    # copy HTML documentation
+    - cp -rf target/docs/* public/
+  artifacts:
+    paths:
+      - public
+    when: always
+
+release-from-tag:
+  stage: 🚀 deploy
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  tags:
+    - docker
+  variables:
+    GIT_STRATEGY: none
+  only:
+    - tags
+  needs:
+    - job: builder
+      artifacts: true
+  script:
+    - echo "Creating release from $CI_COMMIT_TAG"
+    - description=$(<release.md)
+  release:
+    name: "$CI_COMMIT_TAG"
+    description: "Version $CI_COMMIT_TAG\n\n$description\n\n> Created using the GitLab release-cli during the job $CI_JOB_ID."
+    tag_name: $CI_COMMIT_TAG
+    assets:
+      links:
+        - name: "Packaged plugin"
+          url: "https://gitlab.com/Oslandia/qgis/french_locator_filter/-/jobs/${ARTIFACT_JOB_ID}/artifacts/download?job=builder"
+
+deploy-to-qgis-repository:
+  stage: 🚀 deploy
+  image: python:3.9
+  only:
+    - tags
+  tags:
+    - docker
+  needs:
+    - job: build:translation
+      artifacts: true
+  before_script:
+    - apt install git
+    - python -m pip install -U -r requirements/packaging.txt
+  script:
+    # List files
+    - ls -R
+    # Print some info
+    - echo "Deploying the version ${CI_COMMIT_TAG} plugin to QGIS Plugins Repository with the user ${OSGEO_USER_NAME}"
+    - python ${PROJECT_FOLDER}/__about__.py
+    # Amend gitignore to include embedded libs with qgis-plugin-ci
+    - sed -i "s|^*.qm.*| |" .gitignore
+    # git tracks new files
+    - git add $PROJECT_FOLDER/resources/i18n/*.qm
+    # release it
+    - qgis-plugin-ci release ${CI_COMMIT_TAG}
+      --allow-uncommitted-changes
+      --osgeo-username $OSGEO_USER_NAME
+      --osgeo-password $OSGEO_USER_PASSWORD
