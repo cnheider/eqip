@@ -16,13 +16,12 @@ from typing import Any, Mapping, Optional
 import pkg_resources
 import qgis
 from PyQt5.QtCore import Qt
-from jord.qgis_utilities import reconnect_signal
+
 from qgis.PyQt import QtGui, uic
 from qgis.PyQt.QtGui import QIcon, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
 from qgis.core import QgsProject
 from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
-from warg import reload_module
 
 from .piper import (
     append_item_state,
@@ -142,10 +141,14 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.version_label.setText(f"{VERSION}")
 
         if VERBOSE:  # TODO: Auto-reload development installs
+            from warg import reload_module
+
             reload_module("jord")
             reload_module("warg")
             reload_module("apppath")
             # reload_requirements(PLUGIN_DIR/requirements.txt)
+
+        from jord.qgis_utilities import reconnect_signal
 
         reconnect_signal(self.enable_dep_hook_button.clicked, self.on_enable_hook)
         reconnect_signal(self.disable_dep_hook_button.clicked, self.on_disable_hook)
@@ -167,21 +170,32 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         )
 
         if True:  # TODO: Add option for also showing inactive plugins
-            self.active_plugins = {
-                i: name
-                for i, (name, obj) in zip(count(), qgis.utils.plugins.items())
-                if has_requirements_file(name)
-            }
+            if True:
+                plugins = qgis.utils.available_plugins
+                # plug_ins = qgis.utils.active_plugins
+                self.plugin_list = {
+                    i: name
+                    for i, name in zip(count(), plugins)
+                    if has_requirements_file(name)
+                }
+
+            elif False:
+                self.plugin_list = {
+                    i: name
+                    for i, (name, obj) in zip(count(), qgis.utils.plugins.items())
+                    if has_requirements_file(name)
+                }
+
             self.plugin_selection_combo_box.clear()
-            self.plugin_selection_combo_box.addItems([*self.active_plugins.values()])
+            self.plugin_selection_combo_box.addItems([*self.plugin_list.values()])
             self.plugin_selection_combo_box.setCurrentIndex(0)
             self.plugin_selection_combo_box.setEditable(False)
             reconnect_signal(
                 self.plugin_selection_combo_box.currentTextChanged,
                 self.on_select_plugin,
             )
-            if len(self.active_plugins):
-                self.selected_plugin = next(iter(self.active_plugins.values()))
+            if len(self.plugin_list):
+                self.selected_plugin = next(iter(self.plugin_list.values()))
 
             self.populate_requirements()
 

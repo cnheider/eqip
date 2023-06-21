@@ -92,7 +92,7 @@ if __name__ == "__main__":
     def main():
         print(QgsProviderRegistry.instance().pluginList())
         print(qgis.utils.available_plugins)
-        print(qgis.utils.active_plugins)
+        print(qgis.utils.plugin_list)
 
     def sijas():
         pyplugin_installer.instance().fetchAvailablePlugins(False)

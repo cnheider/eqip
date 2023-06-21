@@ -16,9 +16,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
 from qgis.core import QgsSettings
 
 from .eqip import PLUGIN_DIR, PROJECT_NAME
-from .eqip.configuration.options import EqipOptionsPageFactory, read_project_setting
-from .eqip.configuration.piper import install_requirements_from_name
-from .eqip.configuration.project_settings import DEFAULT_PROJECT_SETTINGS
+
 
 # noinspection PyUnresolvedReferences
 from .resources import *  # Initialize Qt resources from file resources.py
@@ -43,10 +41,23 @@ class Eqip:
             application at run time.
         :type iface: QgsInterface
         """
-
         self.iface = iface  # Save reference to the QGIS interface
-
         self.plugin_dir = PLUGIN_DIR
+
+        if True:  # BOOTSTRAPPING EQIP ITSELF
+            from .eqip.configuration.piper import (
+                install_requirements_from_name,
+                is_package_updatable,
+            )
+
+            with open((PLUGIN_DIR / "eqip" / "requirements.txt")) as f:
+                reqs = [
+                    r.project_name
+                    for r in pkg_resources.parse_requirements(f.readlines())
+                    if is_package_updatable(r.project_name)
+                ]
+                if reqs:
+                    install_requirements_from_name(*reqs)
 
         locale = QgsSettings().value(
             f"{PROJECT_NAME}/locale/userLocale", QLocale().name()
@@ -77,17 +88,16 @@ class Eqip:
 
         self.menu = self.tr(MENU_INSTANCE_NAME)
 
+        from .eqip.configuration.options import (
+            EqipOptionsPageFactory,
+            read_project_setting,
+        )
+
+        from .eqip.configuration.project_settings import DEFAULT_PROJECT_SETTINGS
+
         self.options_factory = EqipOptionsPageFactory()
 
-        if False:
-            with open((PLUGIN_DIR / "eqip" / "requirements.txt")) as f:
-                install_requirements_from_name(
-                    *[
-                        r.project_name
-                        for r in pkg_resources.parse_requirements(f.readlines())
-                    ]
-                )
-
+        if True:
             if read_project_setting(
                 "AUTO_ENABLE_DEP_HOOK",
                 defaults=DEFAULT_PROJECT_SETTINGS,

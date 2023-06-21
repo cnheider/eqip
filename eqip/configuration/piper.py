@@ -19,6 +19,7 @@ __all__ = [
 import cgi
 import subprocess
 import sys
+from enum import Enum
 from pathlib import Path
 from typing import Iterable, List, Tuple, Optional, Union, Any
 
@@ -28,8 +29,18 @@ from pkg_resources.extern.packaging.version import InvalidVersion, Version
 # from warg import is_windows # avoid dependency import not standard python pkgs.
 CUR_OS = sys.platform
 IS_WIN = any(CUR_OS.startswith(i) for i in ["win32", "cygwin"])
+IS_MAC = CUR_OS.startswith("darwin")
 
 SP_CALLABLE = subprocess.check_call  # subprocess.call
+
+
+class InstallStateEnum(Enum):
+    updatable = "(Updatable)"
+    editable = "(Editable)"
+    manual = "(Manual)"
+    broken = "(Broken)"
+    not_installed = "(Not Installed)"
+
 
 # subprocess.Popen(**ADDITIONAL_PIPE_KWS)
 # ADDITIONAL_PIPE_KWS =  dict(stderr=subprocess.PIPE,stdout=subprocess.PIPE, stdin=subprocess.PIPE)
@@ -52,12 +63,30 @@ if False:  # may no be needed anymore use pkg_resources.safe_version instead
 def get_qgis_python_interpreter_path() -> Path:
     interpreter_path = Path(sys.executable)
     if IS_WIN:  # For OSGeo4W
-        return interpreter_path.parent / "python.exe"
+        try_path = interpreter_path.parent / "python.exe"
+        if not try_path.exists():
+            try_path = interpreter_path.parent / "python3.exe"
+            if not try_path.exists():
+                print(f"Could not find python {try_path}")
+        return try_path
+    elif IS_MAC:
+        try_path = interpreter_path.parent / "bin" / "python"
+        if not try_path.exists():
+            try_path = interpreter_path.parent / "bin" / "python3"
+            if not try_path.exists():
+                print(f"Could not find python {try_path}")
+        return try_path
+
+    # QString QStandardPaths::findExecutable(const QString &executableName, const QStringList &paths = QStringList())
 
     return interpreter_path
 
 
-def install_requirements_from_file(requirements_path: Path) -> None:
+def install_requirements_from_file(
+    requirements_path: Path,
+    upgrade: bool = True,
+    upgrade_strategy: str = "only-if-needed",
+) -> None:
     """
     Install requirements from a requirements.txt file.
 
@@ -65,10 +94,13 @@ def install_requirements_from_file(requirements_path: Path) -> None:
 
     """
 
-    # pip.main(["install", "pip", "--upgrade"]) # REQUIRES RESTART OF QGIS
+    args = ["install", "-r", str(requirements_path)]
 
-    args = ["install", "-r", str(requirements_path), "--upgrade"]
-    # args = ["install", "rasterio", "--upgrade"] # RASTERIO for window DOES NOT WORK ATM, should be installed manually
+    if upgrade:
+        args += ["--upgrade"]
+
+    if upgrade_strategy:
+        args += ["--upgrade-strategy", upgrade_strategy]
 
     if False:
         import pip
@@ -218,19 +250,33 @@ def is_requirement_updatable(requirement_name: str) -> bool:
 
 
 def install_requirements_from_name(
-    *requirements_name: Iterable[str], upgrade: bool = True
+    *requirements_name: Iterable[str],
+    upgrade: bool = True,
+    ignore_editable_installs: bool = True,
 ) -> None:
     """
     Install requirements from names.
 
     :param requirements_name: Name of requirements.
+    :param ignore_editable_installs: If an installation is editable do not change
     :param upgrade: Whether to upgrade already installed packages
     """
     # pip.main(["install", "pip", "--upgrade"]) # REQUIRES RESTART OF QGIS
 
     # if isinstance(requirements_name, Iterable) and len(requirements_name)==1:
     # ... # handle wrong input format
+    if ignore_editable_installs:
+        try:
+            from warg import package_is_editable
 
+            requirements_name = [
+                r for r in requirements_name if not package_is_editable(r)
+            ]
+        except:
+            print("missing warg, not checking for editable installs")
+
+    # --index-url
+    # --upgrade-strategy <upgrade_strategy>
     args = ["install", *requirements_name]
     # args = ["install", "rasterio", "--upgrade"] # RASTERIO for window DOES NOT WORK ATM, should be installed manually
 
@@ -251,7 +297,7 @@ def remove_requirements_from_name(*requirements_name: Iterable[str]) -> None:
     """
 
     Multiple colliding versions may be installed at once, (conda, pip, ....)
-    Repeat args let you choose how many time to try uninstall the packages.
+    Repeat args let you choose how many times to try to uninstall the packages.
     """
     num_repeat: int = 1
     for _ in range(num_repeat):
@@ -291,30 +337,31 @@ def is_manual(query: str) -> bool:
 
 
 def append_item_state(query: str) -> str:
+    from warg import package_is_editable
+
     out = query
 
     if is_manual(query):
-        out = f"{out} (Manual)"
+        out = f"{out} {InstallStateEnum.manual.value}"
 
     if get_installed_version(query) == "Broken":
-        out = f"{out} (Broken)"
+        out = f"{out} {InstallStateEnum.broken.value}"
     elif not is_package_installed(query):
-        out = f"{out} (Not Installed)"
+        out = f"{out} {InstallStateEnum.not_installed.value}"
+
+    elif package_is_editable(query):
+        out = f"{out} {InstallStateEnum.editable.value}"
 
     elif is_package_updatable(query):
-        out = f"{out} (Updatable)"
+        out = f"{out} {InstallStateEnum.updatable.value}"
 
     return out
 
 
 def strip_item_state(query: str) -> str:
-    return (
-        query.replace("(Not Installed)", "")
-        .replace("(Updatable)", "")
-        .replace("(Manual)", "")
-        .replace("(Broken)", "")
-        .strip()
-    )
+    for state in InstallStateEnum:
+        query = query.replace(state.value, "")
+    return query.strip()
 
 
 if __name__ == "__main__":

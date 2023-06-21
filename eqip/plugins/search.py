@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 from typing import Tuple
 
-
 __all__ = ["find_qgis_plugins"]
 
 
