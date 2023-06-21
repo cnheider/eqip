@@ -1,3 +1,4 @@
+from logging import warn
 from pathlib import Path
 
 from warg import is_windows
@@ -14,7 +15,6 @@ source_folder = Path(__file__).parent.absolute()
 target_folder = b / "profiles" / PROFILE / "python" / "plugins" / source_folder.stem
 
 if False:
-
     qgis_sys_path = Path(target_folder.anchor) / "OSGeo4W" / "apps" / "qgis" / "python"
     import sys
 
@@ -56,8 +56,14 @@ SHORTCUT "Qt Designer with QGIS 3.24.3 custom widgets"
 
 
 if __name__ == "__main__":
-    if not target_folder.exists():
-        target_folder.symlink_to(source_folder)
+    if not target_folder.exists():  # Does it check for casing of filepath in windows?
+        try:
+            target_folder.symlink_to(source_folder)
+        except OSError as e:
+            warn(
+                "Probably missing privileges to make symlink in target parent folder, try running symlinking as administrator or change write access('may be read only') / owner."
+            )
+            raise e
         print("symlinked src->target", source_folder, "->", target_folder)
     else:
         print(target_folder, "already exists!")

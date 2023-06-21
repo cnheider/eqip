@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# qpip documentation build configuration file, created by
+# eqip documentation build configuration file, created by
 # sphinx-quickstart on Sun Feb 12 17:11:03 2012.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -38,7 +38,7 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "qpip"
+project = "eqip"
 copyright = "2013, Alexandra Institute"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -177,8 +177,8 @@ htmlhelp_basename = "TemplateClassdoc"
 latex_documents = [
     (
         "index",
-        "qpip.tex",
-        "qpip Documentation",
+        "eqip.tex",
+        "eqip Documentation",
         "Alexandra Institute",
         "manual",
     ),
@@ -213,5 +213,5 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ("index", "TemplateClass", "qpip Documentation", ["Alexandra Institute"], 1)
+    ("index", "TemplateClass", "eqip Documentation", ["Alexandra Institute"], 1)
 ]

@@ -1,0 +1,4 @@
+apppath
+warg
+jord
+pydevd-pycharm~=231.9011.38

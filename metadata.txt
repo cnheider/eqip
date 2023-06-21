@@ -2,7 +2,7 @@
 # This file should be included when you package your plugin.
 # Mandatory items:
 [general]
-name=Qpip
+name=Eqip
 qgisMinimumVersion=3.0
 description=Qgis Pip Management
 version=0.0.1
@@ -11,16 +11,16 @@ email=christian.heider@alexandra.dk
 
 about=This tool provieds a way to manage python requirements using pip in the QGis python environment.
 
-tracker=https://github.com/cnheider/Qpip/issues
-repository=https://github.com/cnheider/Qpip
+tracker=https://github.com/cnheider/eqip/issues
+repository=https://github.com/cnheider/eqip
 # End of mandatory metadata
 
-homepage=https://github.com/cnheider/Qpip
+homepage=https://github.com/cnheider/eqip
 
 icon=icon.png
 
 # Tags are comma separated with spaces allowed
-tags=python, ortho, photos
+tags=python
 category=Plugins
 #Category of the plugin: Raster, Vector, Database or Web
 

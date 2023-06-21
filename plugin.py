@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
- qpip
+ eqip
 
                               -------------------
         begin                : 2022-05-23
@@ -11,20 +11,26 @@
 """
 import warnings
 
+import pkg_resources
 from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
 from qgis.core import QgsSettings
 
-from .qpip import PLUGIN_DIR, PROJECT_NAME
-from .qpip.configuration.options import QPipOptionsPageFactory
+from .eqip import PLUGIN_DIR, PROJECT_NAME
+
 
 # noinspection PyUnresolvedReferences
 from .resources import *  # Initialize Qt resources from file resources.py
 
+# from .eqip.plugins.hook import add_plugin_dep_hook
+
+
 MENU_INSTANCE_NAME = f"&{PROJECT_NAME.lower()}"
 VERBOSE = False
+DEBUGGING = False
+DEBUGGING_PORT = 6969
 
 
-class QPip:
+class Eqip:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -35,14 +41,37 @@ class QPip:
             application at run time.
         :type iface: QgsInterface
         """
-
         self.iface = iface  # Save reference to the QGIS interface
-
         self.plugin_dir = PLUGIN_DIR
+
+        if True:  # BOOTSTRAPPING EQIP ITSELF
+            from .eqip.configuration.piper import (
+                install_requirements_from_name,
+                is_package_updatable,
+            )
+
+            with open((PLUGIN_DIR / "eqip" / "requirements.txt")) as f:
+                reqs = [
+                    r.project_name
+                    for r in pkg_resources.parse_requirements(f.readlines())
+                    if is_package_updatable(r.project_name)
+                ]
+                if reqs:
+                    install_requirements_from_name(*reqs)
 
         locale = QgsSettings().value(
             f"{PROJECT_NAME}/locale/userLocale", QLocale().name()
         )
+
+        if DEBUGGING:
+            import pydevd_pycharm
+
+            pydevd_pycharm.settrace(
+                "localhost",
+                port=DEBUGGING_PORT,
+                stdoutToServer=True,
+                stderrToServer=True,
+            )
 
         if isinstance(locale, str):
             locale = locale[0:2]  # locale == "en"
@@ -59,7 +88,23 @@ class QPip:
 
         self.menu = self.tr(MENU_INSTANCE_NAME)
 
-        self.options_factory = QPipOptionsPageFactory()
+        from .eqip.configuration.options import (
+            EqipOptionsPageFactory,
+            read_project_setting,
+        )
+
+        from .eqip.configuration.project_settings import DEFAULT_PROJECT_SETTINGS
+
+        self.options_factory = EqipOptionsPageFactory()
+
+        if True:
+            if read_project_setting(
+                "AUTO_ENABLE_DEP_HOOK",
+                defaults=DEFAULT_PROJECT_SETTINGS,
+                project_name=PROJECT_NAME,
+            ):
+                ...
+                # add_plugin_dep_hook()
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads

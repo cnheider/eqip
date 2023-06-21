@@ -15,17 +15,17 @@ __copyright__ = "Copyright 2022, asd"
 import unittest
 
 from ..utilities import get_qgis_app
-from ...qpip.widgets.dock_widget import QPipDockWidget
+from ...eqip.widgets.dock_widget import EqipDockWidget
 
 QGIS_APP = get_qgis_app()
 
 
-class QPipDockWidgetTest(unittest.TestCase):
+class EqipDockWidgetTest(unittest.TestCase):
     """Test dockwidget works."""
 
     def setUp(self):
         """Runs before each test."""
-        self.dockwidget = QPipDockWidget(None)
+        self.dockwidget = EqipDockWidget(None)
 
     def tearDown(self):
         """Runs after each test."""
@@ -37,6 +37,6 @@ class QPipDockWidgetTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(QPipDockWidgetTest)
+    suite = unittest.makeSuite(EqipDockWidgetTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
