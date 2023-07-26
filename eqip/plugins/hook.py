@@ -1,11 +1,15 @@
-import qgis
-
-from qgis.core import QgsProviderRegistry
 import pyplugin_installer
+import qgis
+from qgis.core import QgsProviderRegistry
 from warg import pre_decorate
 
-
-__all__ = ["add_plugin_dep_hook", "remove_plugin_dep_hook"]
+__all__ = [
+    "add_plugin_dep_hook",
+    "remove_plugin_dep_hook",
+    "is_hook_active",
+    "HOOK_ART",
+    "HOOK_ART_DISABLED",
+]
 
 __doc__ = r"""This assume that pyplugin_installer.instance().processDependencies, exists and get called when a new 
 plugin is added"""
@@ -33,6 +37,27 @@ HOOK_ART = """
             .++:...-+=.             
                ::::.                
                                     
+"""
+
+HOOK_ART_DISABLED = """
+
+         \          ..   /          
+          \         #+  /           
+           \        =# /            
+            \       .-/             
+             \       /:             
+              \     /+:             
+               \   / =+             
+                \ /  :#.            
+                 X    #-            
+            -   / \   =*            
+            -- /   \  :*.           
+            +%/     \ :-.           
+           .*/       \:=            
+            /+       -\.            
+           /.++:...-+=.\            
+          /    ::::.    \           
+
 """
 
 
@@ -68,8 +93,9 @@ def add_plugin_dep_hook() -> PluginProcessDependenciesHook:
         HOOK = PluginProcessDependenciesHook()
         ORIGINAL_PROCESS_DEP_FUNC = pyplugin_installer.instance().processDependencies
 
-        print("added plugin hook")
-        print(HOOK_ART)
+        if VERBOSE:
+            print("added plugin hook")
+            print(HOOK_ART)
 
         pyplugin_installer.instance().processDependencies = pre_decorate(
             pyplugin_installer.instance().processDependencies, HOOK
@@ -80,11 +106,17 @@ def add_plugin_dep_hook() -> PluginProcessDependenciesHook:
 def remove_plugin_dep_hook() -> None:
     global HOOK
     if HOOK is not None:
-        print("removed plugin hook")
+        if VERBOSE:
+            print("removed plugin hook")
+            print(HOOK_ART_DISABLED)
 
         pyplugin_installer.instance().processDependencies = ORIGINAL_PROCESS_DEP_FUNC
         del HOOK
         HOOK = None
+
+
+def is_hook_active() -> bool:
+    return HOOK is not None
 
 
 if __name__ == "__main__":

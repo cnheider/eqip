@@ -21,3 +21,11 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+  - repo: local
+    hooks:
+      - id: compile-qt-resources
+        name: compile-qt-resources
+        entry: pyrcc5 -o resources.py resources.qrc
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -10,15 +10,12 @@ __doc__ = r"""
 __all__ = ["EqipOptionsPage", "EqipOptionsPageFactory"]
 
 from itertools import count
-from logging import warning
-from typing import Any, Mapping, Optional
 
 import pkg_resources
 import qgis
 from PyQt5.QtCore import Qt
-
 from qgis.PyQt import QtGui, uic
-from qgis.PyQt.QtGui import QIcon, QStandardItem, QStandardItemModel
+from qgis.PyQt.QtGui import QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
 from qgis.core import QgsProject
 from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
@@ -31,84 +28,27 @@ from .piper import (
     strip_item_state,
 )
 from .project_settings import DEFAULT_PROJECT_SETTINGS
+from .settings import (
+    restore_default_project_settings,
+    store_project_setting,
+    read_project_setting,
+)
 from .. import MANUAL_REQUIREMENTS, PLUGIN_DIR, PROJECT_NAME, VERSION
 from ..plugins import has_requirements_file
-from ..plugins.hook import add_plugin_dep_hook, remove_plugin_dep_hook
-from ..utilities import resolve_path
+from ..plugins.hook import (
+    add_plugin_dep_hook,
+    remove_plugin_dep_hook,
+    is_hook_active,
+    HOOK_ART_DISABLED,
+    HOOK_ART,
+)
+from ..utilities import resolve_path, load_icon, get_icon_path
 
 qgis_project = QgsProject.instance()
 
 VERBOSE = False
 
-
-def restore_default_project_settings(
-    defaults: Optional[Mapping] = None, *, project_name: str = PROJECT_NAME
-):
-    if defaults is None:
-        defaults = {}
-    for key, value in defaults.items():
-        store_project_setting(key, value, project_name=project_name)
-
-
-def store_project_setting(key: str, value: Any, *, project_name: str = PROJECT_NAME):
-    if isinstance(value, bool):
-        qgis_project.writeEntryBool(project_name, key, value)
-    elif isinstance(value, float):
-        qgis_project.writeEntryDouble(project_name, key, value)
-    # elif isinstance(value, int): # DOES NOT EXIST!
-    #    qgis_project.writeEntryNum(project_name, key, value)
-    else:
-        value = str(value)
-        qgis_project.writeEntry(project_name, key, value)
-
-    print(project_name, key, value)
-
-
-def read_project_setting(
-    key: str,
-    type_hint: type = None,
-    *,
-    defaults: Mapping = None,
-    project_name: str = PROJECT_NAME,
-):
-    # read values (returns a tuple with the value, and a status boolean
-    # which communicates whether the value retrieved could be converted to
-    # its type, in these cases a string, an integer, a double and a boolean
-    # respectively)
-
-    if defaults is None:
-        defaults = {}
-
-    if type_hint is not None:
-        if type_hint is bool:
-            val, type_conversion_ok = qgis_project.readBoolEntry(
-                project_name, key, defaults.get(key, None)
-            )
-        elif type_hint is float:
-            val, type_conversion_ok = qgis_project.readDoubleEntry(
-                project_name, key, defaults.get(key, None)
-            )
-        elif type_hint is int:
-            val, type_conversion_ok = qgis_project.readNumEntry(
-                project_name, key, defaults.get(key, None)
-            )
-        else:
-            val, type_conversion_ok = qgis_project.readEntry(
-                project_name, key, str(defaults.get(key, None))
-            )
-    else:
-        val, type_conversion_ok = qgis_project.readEntry(
-            project_name, key, str(defaults.get(key, None))
-        )
-
-    if type_hint is not None:
-        val = type_hint(val)
-
-    if False:
-        if not type_conversion_ok:
-            warning(f"read_plugin_setting: {key} {val} {type_conversion_ok}")
-
-    return val
+OptionWidget, OptionWidgetBase = uic.loadUiType(resolve_path("options.ui", __file__))
 
 
 class EqipOptionsPageFactory(QgsOptionsWidgetFactory):
@@ -116,18 +56,10 @@ class EqipOptionsPageFactory(QgsOptionsWidgetFactory):
         super().__init__()
 
     def icon(self):
-        icon_path = read_project_setting(
-            "RESOURCES_BASE_PATH",
-            defaults=DEFAULT_PROJECT_SETTINGS,
-            project_name=PROJECT_NAME,
-        )
-        return QIcon(f"{icon_path}/icons/snake_bird.png")
+        return load_icon("snake_bird.png")
 
     def createWidget(self, parent):
         return EqipOptionsPage(parent)
-
-
-OptionWidget, OptionWidgetBase = uic.loadUiType(resolve_path("options.ui", __file__))
 
 
 class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
@@ -135,9 +67,9 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         super().__init__(parent)
         self.setupUi(self)
 
-        self.icon_label.setPixmap(QtGui.QPixmap(resolve_path("icons/snake_bird.png")))
+        self.icon_label.setPixmap(QtGui.QPixmap(get_icon_path("snake_bird.png")))
         self.title_label.setText("Eqip")
-        self.sponsor_label.setPixmap(QtGui.QPixmap(resolve_path("icons/pypi.png")))
+        self.sponsor_label.setPixmap(QtGui.QPixmap(get_icon_path("pypi.png")))
         self.version_label.setText(f"{VERSION}")
 
         if VERBOSE:  # TODO: Auto-reload development installs
@@ -211,8 +143,22 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
 
         reconnect_signal(self.reset_options_button.clicked, self.on_reset_options)
 
+        self.update_status_labels()
+        self.hook_asci_art.setAlignment(Qt.AlignCenter)
         # self.environment_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
+
+    def update_status_labels(self):
+        if is_hook_active():
+            self.enable_dep_hook_button.setEnabled(False)
+            self.disable_dep_hook_button.setEnabled(True)
+            self.hook_status_label.setText("Active")
+            self.hook_asci_art.setText(HOOK_ART)
+        else:
+            self.enable_dep_hook_button.setEnabled(True)
+            self.disable_dep_hook_button.setEnabled(False)
+            self.hook_status_label.setText("Inactive")
+            self.hook_asci_art.setText(HOOK_ART_DISABLED)
 
     def on_reset_options(self):
         restore_default_project_settings()
@@ -225,14 +171,14 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         store_project_setting("AUTO_ENABLE_DEP_HOOK", state, project_name=PROJECT_NAME)
 
     def on_enable_hook(self):
-        self.enable_dep_hook_button.setEnabled(False)
-        self.disable_dep_hook_button.setEnabled(True)
         add_plugin_dep_hook()
 
+        self.update_status_labels()
+
     def on_disable_hook(self):
-        self.enable_dep_hook_button.setEnabled(True)
-        self.disable_dep_hook_button.setEnabled(False)
         remove_plugin_dep_hook()
+
+        self.update_status_labels()
 
     def on_install_requirement(self):
         pkgs_to_be_installed = []

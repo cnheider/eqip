@@ -5,7 +5,6 @@ from warg import is_windows
 
 from plugin_config import PROFILE, QGIS_APP_PATH
 
-
 if is_windows():
     b = QGIS_APP_PATH.user_config
 else:
