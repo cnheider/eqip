@@ -20,9 +20,6 @@ from .eqip import PLUGIN_DIR, PROJECT_NAME
 # noinspection PyUnresolvedReferences
 from .resources import *  # Initialize Qt resources from file resources.py
 
-from .eqip.plugins.hook import add_plugin_dep_hook
-
-
 MENU_INSTANCE_NAME = f"&{PROJECT_NAME.lower()}"
 VERBOSE = False
 DEBUGGING = False
@@ -102,6 +99,7 @@ class Eqip:
                 defaults=DEFAULT_PROJECT_SETTINGS,
                 project_name=PROJECT_NAME,
             ):
+                from .eqip.plugins.hook import add_plugin_dep_hook
                 add_plugin_dep_hook()
 
         # Check if plugin was started the first time in current QGIS session
