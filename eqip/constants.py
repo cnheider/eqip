@@ -2,7 +2,7 @@ from pathlib import Path
 
 PROJECT_NAME = "Eqip"
 PLUGIN_DIR = Path(__file__).parent.parent
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 PLUGIN_AUTHOR = "Heider"
 
 MANUAL_REQUIREMENTS = [
