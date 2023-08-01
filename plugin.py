@@ -9,20 +9,22 @@
         email                : christian.heider@alexandra.dk
 
 """
+
 import warnings
 
-import pkg_resources
+# noinspection PyUnresolvedReferences
 from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
+
+# noinspection PyUnresolvedReferences
 from qgis.core import QgsSettings
+
+# noinspection PyUnresolvedReferences
+from qgis.gui import QgisInterface
 
 from .eqip import PLUGIN_DIR, PROJECT_NAME
 
-
 # noinspection PyUnresolvedReferences
-from .resources import *  # Initialize Qt resources from file resources.py
-
-# from .eqip.plugins.hook import add_plugin_dep_hook
-
+from .resources import *  # Initialize Qt resources from file resources.py # TODO: MAKE AN ASSERT ON THIS BEING IMPORTED? maybe add to devpack dev-tools
 
 MENU_INSTANCE_NAME = f"&{PROJECT_NAME.lower()}"
 VERBOSE = False
@@ -33,13 +35,13 @@ DEBUGGING_PORT = 6969
 class Eqip:
     """QGIS Plugin Implementation."""
 
-    def __init__(self, iface):
+    def __init__(self, iface: QgisInterface):
         """Constructor.
 
         :param iface: An interface instance that will be passed to this class
             which provides the hook by which you can manipulate the QGIS
             application at run time.
-        :type iface: QgsInterface
+        :type iface: QgisInterface
         """
         self.iface = iface  # Save reference to the QGIS interface
         self.plugin_dir = PLUGIN_DIR
@@ -49,15 +51,16 @@ class Eqip:
                 install_requirements_from_name,
                 is_package_updatable,
             )
+            from .eqip.configuration.pip_parsing import get_requirements_from_file
 
-            with open((PLUGIN_DIR / "eqip" / "requirements.txt")) as f:
-                reqs = [
-                    r.project_name
-                    for r in pkg_resources.parse_requirements(f.readlines())
-                    if is_package_updatable(r.project_name)
-                ]
-                if reqs:
-                    install_requirements_from_name(*reqs)
+            reqs = [
+                req.name
+                for req in get_requirements_from_file(PLUGIN_DIR / "requirements.txt")
+                if is_package_updatable(req.name)
+            ]
+
+            if reqs:
+                install_requirements_from_name(*reqs)
 
         locale = QgsSettings().value(
             f"{PROJECT_NAME}/locale/userLocale", QLocale().name()
@@ -90,8 +93,8 @@ class Eqip:
 
         from .eqip.configuration.options import (
             EqipOptionsPageFactory,
-            read_project_setting,
         )
+        from .eqip.configuration.settings import read_project_setting
 
         from .eqip.configuration.project_settings import DEFAULT_PROJECT_SETTINGS
 
@@ -103,8 +106,9 @@ class Eqip:
                 defaults=DEFAULT_PROJECT_SETTINGS,
                 project_name=PROJECT_NAME,
             ):
-                ...
-                # add_plugin_dep_hook()
+                from .eqip.plugins.hook import add_plugin_dep_hook
+
+                add_plugin_dep_hook()
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads

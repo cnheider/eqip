@@ -1,5 +1,6 @@
 <RCC>
-  <qresource prefix="/plugins/eqip">
+  <qresource prefix="eqip">
+    <file>icon.png</file>
     <file>icons/snake_bird.png</file>
     <file>icons/pypi.png</file>
   </qresource>

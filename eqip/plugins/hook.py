@@ -1,11 +1,14 @@
-import qgis
-
-from qgis.core import QgsProviderRegistry
 import pyplugin_installer
-from warg import pre_decorate
+import qgis
+from qgis.core import QgsProviderRegistry
 
-
-__all__ = ["add_plugin_dep_hook", "remove_plugin_dep_hook"]
+__all__ = [
+    "add_plugin_dep_hook",
+    "remove_plugin_dep_hook",
+    "is_hook_active",
+    "HOOK_ART",
+    "HOOK_ART_DISABLED",
+]
 
 __doc__ = r"""This assume that pyplugin_installer.instance().processDependencies, exists and get called when a new 
 plugin is added"""
@@ -33,6 +36,27 @@ HOOK_ART = """
             .++:...-+=.             
                ::::.                
                                     
+"""
+
+HOOK_ART_DISABLED = """
+
+         \          ..   /          
+          \         #+  /           
+           \        =# /            
+            \       .-/             
+             \       /:             
+              \     /+:             
+               \   / =+             
+                \ /  :#.            
+                 X    #-            
+            -   / \   =*            
+            -- /   \  :*.           
+            +%/     \ :-.           
+           .*/       \:=            
+            /+       -\.            
+           /.++:...-+=.\            
+          /    ::::.    \           
+
 """
 
 
@@ -64,27 +88,43 @@ ORIGINAL_PROCESS_DEP_FUNC = None
 def add_plugin_dep_hook() -> PluginProcessDependenciesHook:
     """ """
     global ORIGINAL_PROCESS_DEP_FUNC, HOOK
-    if HOOK is None:
-        HOOK = PluginProcessDependenciesHook()
-        ORIGINAL_PROCESS_DEP_FUNC = pyplugin_installer.instance().processDependencies
+    try:
+        if HOOK is None:
+            HOOK = PluginProcessDependenciesHook()
+            ORIGINAL_PROCESS_DEP_FUNC = (
+                pyplugin_installer.instance().processDependencies
+            )
 
-        print("added plugin hook")
-        print(HOOK_ART)
+            if VERBOSE:
+                print("added plugin hook")
+                print(HOOK_ART)
 
-        pyplugin_installer.instance().processDependencies = pre_decorate(
-            pyplugin_installer.instance().processDependencies, HOOK
-        )
+            from warg import pre_decorate
+
+            pyplugin_installer.instance().processDependencies = pre_decorate(
+                pyplugin_installer.instance().processDependencies, HOOK
+            )
+    except ModuleNotFoundError:
+        print("warg dependency not found")
+        remove_plugin_dep_hook()
+
     return HOOK
 
 
 def remove_plugin_dep_hook() -> None:
     global HOOK
     if HOOK is not None:
-        print("removed plugin hook")
+        if VERBOSE:
+            print("removed plugin hook")
+            print(HOOK_ART_DISABLED)
 
         pyplugin_installer.instance().processDependencies = ORIGINAL_PROCESS_DEP_FUNC
         del HOOK
         HOOK = None
+
+
+def is_hook_active() -> bool:
+    return HOOK is not None
 
 
 if __name__ == "__main__":
@@ -100,6 +140,7 @@ if __name__ == "__main__":
 
         # MONKEY PATCH PROCRESS OF DEPENDENCIES with call to eqip requirement installer
         # def processDependencies(self, plugin_id):
+        from warg import pre_decorate
 
         pyplugin_installer.instance().processDependencies = pre_decorate(
             pyplugin_installer.instance().processDependencies

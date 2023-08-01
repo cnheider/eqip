@@ -14,27 +14,48 @@ __all__ = [
     "is_package_installed",
     "remove_requirements_from_name",
     "strip_item_state",
+    "is_package_updatable",
 ]
 
 import cgi
+import json
+import os
 import subprocess
 import sys
 from enum import Enum
+from importlib.metadata import Distribution
 from pathlib import Path
 from typing import Iterable, List, Tuple, Optional, Union, Any
+from urllib.error import HTTPError
+from urllib.request import (
+    Request,
+    urlopen,
+)  # TODO: should use QgsNetworkAccessManager instead for networking
 
-import pkg_resources
-from pkg_resources.extern.packaging.version import InvalidVersion, Version
+from packaging import version
+from packaging.version import InvalidVersion, Version
 
 # from warg import is_windows # avoid dependency import not standard python pkgs.
 CUR_OS = sys.platform
 IS_WIN = any(CUR_OS.startswith(i) for i in ["win32", "cygwin"])
 IS_MAC = CUR_OS.startswith("darwin")
 
-SP_CALLABLE = subprocess.check_call  # subprocess.call
+
+# @passes_kws_to(subprocess.check_call)
+def catching_callable(*args, **kwargs):
+    try:
+        subprocess.check_call(*args, **kwargs)
+    except subprocess.CalledProcessError as e:
+        print(e)
+
+
+SP_CALLABLE = catching_callable  # subprocess.call
+DEFAULT_PIP_INDEX = os.environ.get("PIP_INDEX_URL", "https://pypi.org/pypi/")
 
 
 class InstallStateEnum(Enum):
+    """ """
+
     updatable = "(Updatable)"
     editable = "(Editable)"
     manual = "(Manual)"
@@ -42,25 +63,38 @@ class InstallStateEnum(Enum):
     not_installed = "(Not Installed)"
 
 
+class UpgradeStrategyEnum(Enum):
+    """
+    eager - all packages will be upgraded to the latest possible version. It should be noted here that pip’s current
+    resolution algorithm isn’t even aware of packages other than those specified on the command line, and those
+    identified as dependencies. This may or may not be true of the new resolver.
+
+    only-if-needed - packages are only upgraded if they are named in the pip command or a requirement file (i.e,
+    they are direct requirements), or an upgraded parent needs a later version of the dependency than is currently
+    installed.
+
+    to-satisfy-only (undocumented, please avoid) - packages are not upgraded (not even direct requirements) unless the
+    currently installed version fails to satisfy a requirement (either explicitly specified or a dependency).
+
+    This is actually the “default” upgrade strategy when --upgrade is not set, i.e. pip install AlreadyInstalled and pip
+    install --upgrade --upgrade-strategy=to-satisfy-only AlreadyInstalled yield the same behavior.
+    """
+
+    eager = "eager"
+    to_satisfy_only = "to-satisfy-only"
+    only_if_needed = "only-if-needed"
+
+
 # subprocess.Popen(**ADDITIONAL_PIPE_KWS)
-# ADDITIONAL_PIPE_KWS =  dict(stderr=subprocess.PIPE,stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-
-if False:  # may no be needed anymore use pkg_resources.safe_version instead
-    from warg import passes_kws_to
-
-    @passes_kws_to(pkg_resources.parse_version)
-    def catching_parse_version(
-        *args, drop_invalid_versions: bool = True, **kwargs
-    ) -> Version:
-        try:
-            return pkg_resources.parse_version(*args, **kwargs)
-        except InvalidVersion as e:
-            if drop_invalid_versions:
-                return Version()
-            raise e
+# ADDITIONAL_PIPE_KWS = dict(stderr=subprocess.PIPE,stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
 
-def get_qgis_python_interpreter_path() -> Path:
+def get_qgis_python_interpreter_path() -> Optional[Path]:
+    """
+
+    :return: The path of the qgis python interpreter
+    :rtype: Optional[Path]
+    """
     interpreter_path = Path(sys.executable)
     if IS_WIN:  # For OSGeo4W
         try_path = interpreter_path.parent / "python.exe"
@@ -68,6 +102,7 @@ def get_qgis_python_interpreter_path() -> Path:
             try_path = interpreter_path.parent / "python3.exe"
             if not try_path.exists():
                 print(f"Could not find python {try_path}")
+                return None
         return try_path
     elif IS_MAC:
         try_path = interpreter_path.parent / "bin" / "python"
@@ -75,6 +110,7 @@ def get_qgis_python_interpreter_path() -> Path:
             try_path = interpreter_path.parent / "bin" / "python3"
             if not try_path.exists():
                 print(f"Could not find python {try_path}")
+                return None
         return try_path
 
     # QString QStandardPaths::findExecutable(const QString &executableName, const QStringList &paths = QStringList())
@@ -85,13 +121,15 @@ def get_qgis_python_interpreter_path() -> Path:
 def install_requirements_from_file(
     requirements_path: Path,
     upgrade: bool = True,
-    upgrade_strategy: str = "only-if-needed",
+    upgrade_strategy: UpgradeStrategyEnum = UpgradeStrategyEnum.only_if_needed,
 ) -> None:
     """
     Install requirements from a requirements.txt file.
 
+    :param upgrade:
+    :param upgrade_strategy:
     :param requirements_path: Path to requirements.txt file.
-
+    :rtype: None
     """
 
     args = ["install", "-r", str(requirements_path)]
@@ -100,7 +138,24 @@ def install_requirements_from_file(
         args += ["--upgrade"]
 
     if upgrade_strategy:
-        args += ["--upgrade-strategy", upgrade_strategy]
+        args += ["--upgrade-strategy", upgrade_strategy.value]
+
+    """
+  other options:
+  
+  --index-url
+--extra-index-url
+--no-index
+--find-links
+  
+  --force-reinstall
+  --ignore-installed
+  --no-deps
+  --ignore-requires-python
+  --require-hashes
+  --editable
+  --pre # Prereleases
+  """
 
     if False:
         import pip
@@ -111,7 +166,48 @@ def install_requirements_from_file(
         SP_CALLABLE(["pip"] + args)
 
     elif True:
-        SP_CALLABLE([str(get_qgis_python_interpreter_path()), "-m", "pip", *args])
+        install_pip_if_not_present()
+
+        if is_pip_installed():
+            SP_CALLABLE([str(get_qgis_python_interpreter_path()), "-m", "pip", *args])
+
+        else:
+            print("PIP IS STILL MISSING!")
+
+
+def is_pip_installed():
+    pip_present = True
+    try:
+        import pip
+    except ImportError:
+        pip_present = False
+    return pip_present
+
+
+def install_pip_if_not_present():
+    if not is_pip_installed():
+        SP_CALLABLE(
+            [str(get_qgis_python_interpreter_path()), "-m", "ensurepip", "--upgrade"]
+        )
+
+
+"""
+import pip
+
+def import_or_install(package):
+    try:
+        __import__(package)
+    except ImportError:
+        pip.main(['install', package])    
+"""
+
+
+def pip_installed():
+    import sys
+    import subprocess
+
+    pip_check = subprocess.run([str(get_qgis_python_interpreter_path()), "-m", "pip"])
+    return not bool(pip_check.returncode)
 
 
 def is_requirement_installed(requirement_name: str) -> bool:
@@ -140,7 +236,7 @@ def get_requirement_version(requirement_name: str) -> Optional[str]:
 
 def get_installed_version(
     requirement_name: str, reload: bool = True
-) -> Optional[Union[str, Version]]:
+) -> Optional[Union[str, version.Version]]:
     import importlib
 
     if reload:
@@ -159,69 +255,75 @@ def get_installed_version(
 
     try:
         # importlib.reload(sys.modules['pkg_resources'])
-        dist = pkg_resources.get_distribution(requirement_name)
+        dist = Distribution.from_name(requirement_name)
         if dist:
-            return dist.parsed_version  # .version
-    except pkg_resources.DistributionNotFound as e:
-        pass
+            return version.parse(dist.version)
+    except Exception as e:
+        print(e)
 
     return None
 
 
-def get_newest_version(requirement_name: str) -> Optional[Any]:
-    from pkg_resources import parse_version
-    import os
-    import json
-    from urllib.request import (
-        Request,
-        urlopen,
-    )  # TODO: should use QgsNetworkAccessManager instead for networking
-
-    from urllib.error import HTTPError
-
+def get_newest_version(requirement_name: str) -> Optional[version.Version]:
     try:
-        DEFAULT_PIP_INDEX = os.environ.get("PIP_INDEX_URL", "https://pypi.org/pypi/")
-
-        def get_charset(headers, default: str = "utf-8"):
-            # this is annoying.
-            try:
-                charset = headers.get_content_charset(default)
-            except AttributeError:
-                # Python 2
-                charset = headers.getparam("charset")
-                if charset is None:
-                    ct_header = headers.getheader("Content-Type")
-                    content_type, params = cgi.parse_header(ct_header)
-                    charset = params.get("charset", default)
-            return charset
-
-        def json_get(url: str, headers: Tuple = (("Accept", "application/json"),)):
-            request = Request(url=url, headers=dict(headers))
-            response = urlopen(request)
-            code = response.code
-            if code != 200:
-                err = ConnectionError(f"Unexpected response code {code}")
-                err.response_data = response.read()
-                raise err
-            raw_data = response.read()
-            response_encoding = get_charset(response.headers)
-            decoded_data = raw_data.decode(response_encoding)
-            data = json.loads(decoded_data)
-            return data
-
-        def get_data_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
-            uri = f"{index.rstrip('/')}/{name.split('[')[0]}/json"
-            data = json_get(uri)
-            return data
-
-        def get_versions_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
-            data = get_data_pypi(name, index)
-            version_numbers = sorted(data["releases"], key=pkg_resources.safe_version)
-            return tuple(version_numbers)
-
-        return parse_version(get_versions_pypi(requirement_name)[-1])
+        return version.parse(get_versions_pypi(requirement_name)[-1])
     except HTTPError:
         return None
+
+
+def get_charset(headers, default: str = "utf-8"):
+    # this is annoying.
+    try:
+        charset = headers.get_content_charset(default)
+    except AttributeError:
+        # Python 2
+        charset = headers.getparam("charset")
+        if charset is None:
+            ct_header = headers.getheader("Content-Type")
+            content_type, params = cgi.parse_header(ct_header)
+            charset = params.get("charset", default)
+    return charset
+
+
+def json_get(url: str, headers: Tuple = (("Accept", "application/json"),)) -> str:
+    response = urlopen(Request(url=url, headers=dict(headers)))
+    code = response.code
+
+    if code != 200:
+        err = ConnectionError(f"Unexpected response code {code}")
+        err.response_data = response.read()
+        raise err
+
+    data = json.loads(response.read().decode(get_charset(response.headers)))
+    return data
+
+
+def get_data_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
+    uri = f"{index.rstrip('/')}/{name.split('[')[0]}/json"
+    data = json_get(uri)
+    return data
+
+
+def get_versions_pypi(
+    name: str, index: str = DEFAULT_PIP_INDEX
+) -> Union[None, tuple[Version], Version]:
+    try:
+        pypi_data = get_data_pypi(name, index)
+        releases = pypi_data["releases"]
+    except:
+        return None
+
+    try:
+        return (*sorted(releases, key=version.parse),)
+    except InvalidVersion as e:  # VERSION NUMBER MAYBE BROKEN
+        print(name, index, e)
+
+        try:
+            return [str(version.parse(list(releases.keys())[-1]))]
+        except InvalidVersion as e:  # VERSION NUMBER MAYBE BROKEN, GIVE UP
+            print(name, index, e)
+
+            return None
 
 
 def pip_freeze_list() -> List:
@@ -272,8 +374,8 @@ def install_requirements_from_name(
             requirements_name = [
                 r for r in requirements_name if not package_is_editable(r)
             ]
-        except:
-            print("missing warg, not checking for editable installs")
+        except (ImportError, ModuleNotFoundError) as e:
+            print(f"missing module, not checking for editable install, {e}")
 
     # --index-url
     # --upgrade-strategy <upgrade_strategy>
@@ -290,7 +392,12 @@ def install_requirements_from_name(
     elif False:
         SP_CALLABLE(["pip"] + args)
     elif True:
-        SP_CALLABLE([str(get_qgis_python_interpreter_path()), "-m", "pip", *args])
+        install_pip_if_not_present()
+
+        if is_pip_installed():
+            SP_CALLABLE([str(get_qgis_python_interpreter_path()), "-m", "pip", *args])
+        else:
+            print("PIP IS STILL MISSING!")
 
 
 def remove_requirements_from_name(*requirements_name: Iterable[str]) -> None:
@@ -302,7 +409,7 @@ def remove_requirements_from_name(*requirements_name: Iterable[str]) -> None:
     num_repeat: int = 1
     for _ in range(num_repeat):
         args = ["uninstall", *requirements_name, "-y"]
-        print(args)
+
         if False:
             import pip  # DEPRECATE
 
@@ -312,9 +419,8 @@ def remove_requirements_from_name(*requirements_name: Iterable[str]) -> None:
             SP_CALLABLE(["pip"] + args)  # Use interpreter path instead
 
         elif True:
-            interpreter = Path(sys.executable)
             SP_CALLABLE(
-                [str(interpreter), "-m", "pip"] + args
+                [str(get_qgis_python_interpreter_path()), "-m", "pip"] + args
             )  # figure out which python!
 
 
@@ -366,10 +472,21 @@ def strip_item_state(query: str) -> str:
 
 if __name__ == "__main__":
 
-    def _main():
+    def fasga():
         print(is_package_updatable("warg"))
 
-    _main()
+    def gasdsa():
+        print(get_versions_pypi("warg"))
+
+    def uhasudh():
+        print(get_newest_version("warg"))
+
+    def uhasudasgfagh():
+        print(get_versions_pypi("warg"))
+
+    # uhasudasgfagh()
+
+    # uhasudh()
 
     def ia():
         print(
