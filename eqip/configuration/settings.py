@@ -1,6 +1,9 @@
 from logging import warning
 from typing import Optional, Mapping, Any
+
+# noinspection PyUnresolvedReferences
 from qgis.core import QgsProject
+
 from eqip.eqip import PROJECT_NAME
 
 qgis_project = QgsProject.instance()

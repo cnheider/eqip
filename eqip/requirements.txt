@@ -1,3 +1,0 @@
-apppath # https://github.com/pything/apppath
-warg # https://github.com/pything/warg
-jord # https://github.com/aivclab/jord

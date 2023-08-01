@@ -9,16 +9,31 @@ __doc__ = r"""
 
 __all__ = ["EqipOptionsPage", "EqipOptionsPageFactory"]
 
+from importlib import metadata
 from itertools import count
 
-import pkg_resources
+# noinspection PyUnresolvedReferences
 import qgis
-from PyQt5.QtCore import Qt
+
+# noinspection PyUnresolvedReferences
 from qgis.PyQt import QtGui, uic
+
+# noinspection PyUnresolvedReferences
 from qgis.PyQt.QtGui import QStandardItem, QStandardItemModel
+
+# noinspection PyUnresolvedReferences
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
+
+# noinspection PyUnresolvedReferences
 from qgis.core import QgsProject
+
+# noinspection PyUnresolvedReferences
 from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
+
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
+
+from warg import get_requirements_from_file, get_package_location
 
 from .piper import (
     append_item_state,
@@ -44,10 +59,9 @@ from ..plugins.hook import (
 )
 from ..utilities import resolve_path, load_icon, get_icon_path
 
-qgis_project = QgsProject.instance()
-
 VERBOSE = False
 
+qgis_project = QgsProject.instance()
 OptionWidget, OptionWidgetBase = uic.loadUiType(resolve_path("options.ui", __file__))
 
 
@@ -96,7 +110,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         reconnect_signal(
             self.auto_enable_check_box.stateChanged, self.on_auto_enable_changed
         )
-        reconnect_signal(self.refresh_button.clicked, self.populate_requirements)
+        reconnect_signal(self.refresh_button.clicked, self.populate_plugin_requirements)
         reconnect_signal(
             self.install_requirements_button.clicked, self.on_install_requirement
         )
@@ -129,9 +143,9 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             if len(self.plugin_list):
                 self.selected_plugin = next(iter(self.plugin_list.values()))
 
-            self.populate_requirements()
+            self.populate_plugin_requirements()
 
-        # self.requirements_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
+        # self.requirements_tree_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
 
         reconnect_signal(
@@ -165,7 +179,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
 
     def on_select_plugin(self, value):
         self.selected_plugin = value  # self.active_plugins[value]
-        self.populate_requirements()
+        self.populate_plugin_requirements()
 
     def on_auto_enable_changed(self, state):
         store_project_setting("AUTO_ENABLE_DEP_HOOK", state, project_name=PROJECT_NAME)
@@ -184,7 +198,9 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         pkgs_to_be_installed = []
         pkgs_to_be_removed = []
         for index in range(self.requirements_list_model.rowCount()):
-            item = self.requirements_list_model.item(index)
+            item = self.requirements_list_model.item(
+                index, column=0
+            )  # https://doc.qt.io/qtforpython-6/PySide6/QtGui/QStandardItemModel.html#qstandarditemmodel
             r = strip_item_state(
                 item.text()
             )  # TODO: do not rely on text from item but another source for the 'real' requirement query to pip
@@ -214,41 +230,83 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
                 f"Removed Python Dependencies:\n{strd}",
             )
 
-        self.populate_requirements()  # TODO: change are not necessarily reflected immediately, RESTART REQUIRED FOR NOW!!
+        self.populate_plugin_requirements()  # TODO: change are not necessarily reflected immediately, RESTART REQUIRED FOR NOW!!
 
-    def populate_requirements(self):
+    def populate_plugin_requirements(self):
         if hasattr(self, "requirements_list_model"):
             del self.requirements_list_model
 
-        self.requirements_list_model = QStandardItemModel(self.requirements_list_view)
+        self.requirements_list_model = QStandardItemModel(self.requirements_tree_view)
 
-        with open((PLUGIN_DIR.parent / self.selected_plugin / "requirements.txt")) as f:
-            for r in pkg_resources.parse_requirements(f.readlines()):
-                item = QStandardItem(append_item_state(r.name))
+        for requirement in get_requirements_from_file(
+            PLUGIN_DIR.parent / self.selected_plugin / "requirements.txt"
+        ):
+            name_item = QStandardItem(requirement.name)
+            current_version_item = QStandardItem("0")
+            state_item = QStandardItem(append_item_state(requirement.name))
+            required_version_item = QStandardItem(
+                ", ".join([str(s) for s in requirement.specifier])
+            )
+            extras_item = QStandardItem(f"[{', '.join(requirement.extras)}]")
+            location_item = QStandardItem(str(get_package_location(requirement.name)))
 
-                item.setCheckable(True)
-                if is_package_installed(r.name):
-                    item.setCheckState(Qt.Checked)
-                else:
-                    item.setCheckState(Qt.Unchecked)
+            # TODO: ADD Other version of package for installation, by the check-able boxes
 
-                self.requirements_list_model.appendRow(item)
-
-        for r in pkg_resources.parse_requirements(MANUAL_REQUIREMENTS):
-            n = append_item_state(r.name)
-            # n = f'{append_item_state(r.name)} (Manual)'
-            item = QStandardItem(n)
-
-            item.setCheckable(False)
-            if is_package_installed(r.name):
-                item.setCheckState(Qt.Checked)
+            name_item.setCheckable(True)
+            if is_package_installed(requirement.name):
+                name_item.setCheckState(Qt.Checked)
             else:
-                item.setCheckState(Qt.Unchecked)
+                name_item.setCheckState(Qt.Unchecked)
 
-            self.requirements_list_model.appendRow(item)
+            self.requirements_list_model.appendRow(
+                [
+                    name_item,
+                    current_version_item,
+                    state_item,
+                    extras_item,
+                    required_version_item,
+                    location_item,
+                ]
+            )
 
-        self.requirements_list_view.setModel(self.requirements_list_model)
-        self.requirements_list_view.show()
+        for manual_requirement in MANUAL_REQUIREMENTS:
+            # n = f'{append_item_state(r.name)} (Manual)'
+            name_item = QStandardItem(manual_requirement)
+            current_version_item = QStandardItem("0")
+            state_item = QStandardItem(append_item_state(manual_requirement))
+
+            name_item.setCheckable(False)
+            if is_package_installed(manual_requirement):
+                name_item.setCheckState(Qt.Checked)
+            else:
+                name_item.setCheckState(Qt.Unchecked)
+
+            self.requirements_list_model.appendRow(
+                [name_item, current_version_item, state_item]
+            )
+
+        column_headers = [
+            "package",
+            "current version",
+            "state",
+            "extras",
+            "required version",
+            "location",
+        ]
+        for ci, label in enumerate(column_headers):
+            self.requirements_list_model.setHeaderData(
+                ci, QtCore.Qt.Horizontal, str(label)
+            )
+
+        self.requirements_tree_view.setModel(self.requirements_list_model)
+
+        for ci in range(len(column_headers)):
+            self.requirements_tree_view.resizeColumnToContents(ci)
+
+        # TODO: ADD BUTTON TO NOW TO NEXT UNSATISFIED REQUIREMENT
+        # requirements_tree_view.scrollTo(item_index)
+
+        self.requirements_tree_view.show()
 
     def populate_environment(self):
         if hasattr(self, "environment_list_model"):
@@ -257,8 +315,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.environment_list_model = QStandardItemModel(self.environment_list_view)
 
         if True:
-            for r in pkg_resources.working_set:
-                l = r.key
+            for l in [r.name for r in metadata.Distribution().discover()]:
                 n = append_item_state(l)
 
                 if len(self.environment_list_model.findItems(n)) < 1:
@@ -286,7 +343,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.populate_environment()  # May be slow
 
     def on_refresh_button_clicked(self):
-        self.populate_requirements()
+        self.populate_plugin_requirements()
 
 
 class EqipOptionsPage(QgsOptionsPageWidget):

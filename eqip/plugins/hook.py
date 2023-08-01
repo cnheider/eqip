@@ -2,7 +2,6 @@ import pyplugin_installer
 import qgis
 from qgis.core import QgsProviderRegistry
 
-
 __all__ = [
     "add_plugin_dep_hook",
     "remove_plugin_dep_hook",
@@ -92,12 +91,13 @@ def add_plugin_dep_hook() -> PluginProcessDependenciesHook:
     try:
         if HOOK is None:
             HOOK = PluginProcessDependenciesHook()
-            ORIGINAL_PROCESS_DEP_FUNC = pyplugin_installer.instance().processDependencies
+            ORIGINAL_PROCESS_DEP_FUNC = (
+                pyplugin_installer.instance().processDependencies
+            )
 
             if VERBOSE:
                 print("added plugin hook")
                 print(HOOK_ART)
-
 
             from warg import pre_decorate
 
@@ -105,7 +105,7 @@ def add_plugin_dep_hook() -> PluginProcessDependenciesHook:
                 pyplugin_installer.instance().processDependencies, HOOK
             )
     except ModuleNotFoundError:
-        print('warg dependency not found')
+        print("warg dependency not found")
         remove_plugin_dep_hook()
 
     return HOOK
@@ -140,6 +140,7 @@ if __name__ == "__main__":
 
         # MONKEY PATCH PROCRESS OF DEPENDENCIES with call to eqip requirement installer
         # def processDependencies(self, plugin_id):
+        from warg import pre_decorate
 
         pyplugin_installer.instance().processDependencies = pre_decorate(
             pyplugin_installer.instance().processDependencies

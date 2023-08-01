@@ -1,9 +1,18 @@
 fail_fast: true
 repos:
+  - repo: local
+    hooks:
+      - id: compile-qt-resources
+        name: compile-qt-resources
+        entry: pyrcc5 -o resources.py resources.qrc
+        language: system
+        pass_filenames: false
+        always_run: true
   - repo: https://github.com/ambv/black
     rev: 23.3.0
     hooks:
       - id: black
+        exclude: resources.py
         language_version: python3.10
   - repo: local
     hooks:
@@ -18,14 +27,6 @@ repos:
       - id: flake8-check2  # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         name: flake8-check2
         entry: flake8 eqip --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=*exclude*
-        language: system
-        pass_filenames: false
-        always_run: true
-  - repo: local
-    hooks:
-      - id: compile-qt-resources
-        name: compile-qt-resources
-        entry: pyrcc5 -o resources.py resources.qrc
         language: system
         pass_filenames: false
         always_run: true
