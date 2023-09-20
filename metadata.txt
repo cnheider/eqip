@@ -5,9 +5,9 @@
 name=Eqip
 qgisMinimumVersion=3.0
 description=Qgis Pip Management
-version=0.0.1
-author=Alexandra Institute
-email=christian.heider@alexandra.dk
+version=0.0.2
+author=MapsPeople A/S
+email=chen@mapspeople.com
 
 about=This tool provieds a way to manage python requirements using pip in the QGis python environment.
 
@@ -20,7 +20,7 @@ homepage=https://github.com/cnheider/eqip
 icon=icon.png
 
 # Tags are comma separated with spaces allowed
-tags=python
+tags=python, live, inspection, debugging, shapely, geometry, collections
 category=Plugins
 #Category of the plugin: Raster, Vector, Database or Web
 

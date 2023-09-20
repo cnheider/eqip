@@ -30,6 +30,7 @@ MENU_INSTANCE_NAME = f"&{PROJECT_NAME.lower()}"
 VERBOSE = False
 DEBUGGING = False
 DEBUGGING_PORT = 6969
+FORCE_RELOAD = False
 
 
 class Eqip:
@@ -65,6 +66,11 @@ class Eqip:
         locale = QgsSettings().value(
             f"{PROJECT_NAME}/locale/userLocale", QLocale().name()
         )
+
+        if VERBOSE or DEBUGGING or FORCE_RELOAD:  # reload warg
+            from warg import reload_module
+
+            reload_module("warg")
 
         if DEBUGGING:
             import pydevd_pycharm

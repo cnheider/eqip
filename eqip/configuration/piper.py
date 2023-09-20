@@ -18,14 +18,16 @@ __all__ = [
 ]
 
 import cgi
+import ensurepip
 import json
 import os
 import subprocess
 import sys
+
 from enum import Enum
 from importlib.metadata import Distribution
 from pathlib import Path
-from typing import Iterable, List, Tuple, Optional, Union, Any
+from typing import Iterable, List, Tuple, Optional, Union
 from urllib.error import HTTPError
 from urllib.request import (
     Request,
@@ -104,6 +106,7 @@ def get_qgis_python_interpreter_path() -> Optional[Path]:
                 print(f"Could not find python {try_path}")
                 return None
         return try_path
+
     elif IS_MAC:
         try_path = interpreter_path.parent / "bin" / "python"
         if not try_path.exists():
@@ -184,11 +187,19 @@ def is_pip_installed():
     return pip_present
 
 
-def install_pip_if_not_present():
-    if not is_pip_installed():
-        SP_CALLABLE(
-            [str(get_qgis_python_interpreter_path()), "-m", "ensurepip", "--upgrade"]
-        )
+def install_pip_if_not_present(always_upgrade: bool = True):
+    if not is_pip_installed() or always_upgrade:
+        if False:
+            ensurepip.bootstrap(upgrade=True)
+        else:
+            SP_CALLABLE(
+                [
+                    str(get_qgis_python_interpreter_path()),
+                    "-m",
+                    "ensurepip",
+                    "--upgrade",
+                ]
+            )
 
 
 """
@@ -203,7 +214,6 @@ def import_or_install(package):
 
 
 def pip_installed():
-    import sys
     import subprocess
 
     pip_check = subprocess.run([str(get_qgis_python_interpreter_path()), "-m", "pip"])
@@ -266,7 +276,7 @@ def get_installed_version(
 
 def get_newest_version(requirement_name: str) -> Optional[version.Version]:
     try:
-        return version.parse(get_versions_pypi(requirement_name)[-1])
+        return version.parse(get_versions_from_index(requirement_name)[-1])
     except HTTPError:
         return None
 
@@ -298,17 +308,17 @@ def json_get(url: str, headers: Tuple = (("Accept", "application/json"),)) -> st
     return data
 
 
-def get_data_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
+def get_data_from_index(name: str, index: str = DEFAULT_PIP_INDEX):
     uri = f"{index.rstrip('/')}/{name.split('[')[0]}/json"
     data = json_get(uri)
     return data
 
 
-def get_versions_pypi(
+def get_versions_from_index(
     name: str, index: str = DEFAULT_PIP_INDEX
 ) -> Union[None, tuple[Version], Version]:
     try:
-        pypi_data = get_data_pypi(name, index)
+        pypi_data = get_data_from_index(name, index)
         releases = pypi_data["releases"]
     except:
         return None
@@ -381,6 +391,8 @@ def install_requirements_from_name(
     # --upgrade-strategy <upgrade_strategy>
     args = ["install", *requirements_name]
     # args = ["install", "rasterio", "--upgrade"] # RASTERIO for window DOES NOT WORK ATM, should be installed manually
+
+    # TODO: ADD OPTION TO PICK INDEX
 
     if upgrade:
         args += ["--upgrade"]
@@ -476,13 +488,13 @@ if __name__ == "__main__":
         print(is_package_updatable("warg"))
 
     def gasdsa():
-        print(get_versions_pypi("warg"))
+        print(get_versions_from_index("warg"))
 
     def uhasudh():
         print(get_newest_version("warg"))
 
     def uhasudasgfagh():
-        print(get_versions_pypi("warg"))
+        print(get_versions_from_index("warg"))
 
     # uhasudasgfagh()
 

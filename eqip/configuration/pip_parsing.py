@@ -2,11 +2,14 @@ from pathlib import Path
 from typing import List, Union
 
 from packaging.requirements import Requirement
-from pip._internal.network.session import PipSession
-from pip._internal.req import parse_requirements
-from pip._internal.req.req_file import ParsedRequirement
-from pip._internal.utils.packaging import get_requirement
 
+try:
+    from pip._internal.network.session import PipSession
+    from pip._internal.req import parse_requirements
+    from pip._internal.req.req_file import ParsedRequirement
+    from pip._internal.utils.packaging import get_requirement
+except ImportError:
+    print("pip version is outdated, please upgrade")
 
 from urllib.parse import urlparse
 
@@ -15,6 +18,7 @@ __all__ = ["get_requirements_from_file"]
 
 def get_reqed(req: ParsedRequirement) -> Requirement:
     req_ = req.requirement
+
     if req.is_editable:  # parse out egg=... fragment from VCS URL
         parsed = urlparse(req_)
         egg_name = parsed.fragment.partition("egg=")[-1]
@@ -22,6 +26,7 @@ def get_reqed(req: ParsedRequirement) -> Requirement:
         req_parsed = f"{egg_name} @ {without_fragment}"
     else:
         req_parsed = req_
+
     return get_requirement(req_parsed)
 
 

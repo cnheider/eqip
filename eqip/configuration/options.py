@@ -33,7 +33,8 @@ from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 
-from warg import get_requirements_from_file, get_package_location
+from warg import get_package_location
+from warg.packages.pip_parsing import get_requirements_from_file
 
 from .piper import (
     append_item_state,
@@ -41,6 +42,7 @@ from .piper import (
     is_package_installed,
     remove_requirements_from_name,
     strip_item_state,
+    get_installed_version,
 )
 from .project_settings import DEFAULT_PROJECT_SETTINGS
 from .settings import (
@@ -60,6 +62,7 @@ from ..plugins.hook import (
 from ..utilities import resolve_path, load_icon, get_icon_path
 
 VERBOSE = False
+FORCE_RELOAD = False
 
 qgis_project = QgsProject.instance()
 OptionWidget, OptionWidgetBase = uic.loadUiType(resolve_path("options.ui", __file__))
@@ -86,7 +89,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.sponsor_label.setPixmap(QtGui.QPixmap(get_icon_path("pypi.png")))
         self.version_label.setText(f"{VERSION}")
 
-        if VERBOSE:  # TODO: Auto-reload development installs
+        if VERBOSE or FORCE_RELOAD:  # TODO: Auto-reload development installs
             from warg import reload_module
 
             reload_module("jord")
@@ -156,6 +159,12 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         )
 
         reconnect_signal(self.reset_options_button.clicked, self.on_reset_options)
+
+        # self.editable_install_file_widget
+        # self.editable_install_button
+
+        # reconnect_signal(self.search_button.clicked,self.on_search_button_clicked())
+        # self.search_line_edit
 
         self.update_status_labels()
         self.hook_asci_art.setAlignment(Qt.AlignCenter)
@@ -242,7 +251,9 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             PLUGIN_DIR.parent / self.selected_plugin / "requirements.txt"
         ):
             name_item = QStandardItem(requirement.name)
-            current_version_item = QStandardItem("0")
+            current_version_item = QStandardItem(
+                str(get_installed_version(requirement.name))
+            )
             state_item = QStandardItem(append_item_state(requirement.name))
             required_version_item = QStandardItem(
                 ", ".join([str(s) for s in requirement.specifier])
@@ -272,7 +283,9 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         for manual_requirement in MANUAL_REQUIREMENTS:
             # n = f'{append_item_state(r.name)} (Manual)'
             name_item = QStandardItem(manual_requirement)
-            current_version_item = QStandardItem("0")
+            current_version_item = QStandardItem(
+                str(get_installed_version(manual_requirement))
+            )
             state_item = QStandardItem(append_item_state(manual_requirement))
 
             name_item.setCheckable(False)
@@ -315,7 +328,10 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.environment_list_model = QStandardItemModel(self.environment_list_view)
 
         if True:
-            for l in [r.name for r in metadata.Distribution().discover()]:
+            for l in [
+                r.name if hasattr(r, "name") else str(r)
+                for r in metadata.Distribution().discover()
+            ]:
                 n = append_item_state(l)
 
                 if len(self.environment_list_model.findItems(n)) < 1:
