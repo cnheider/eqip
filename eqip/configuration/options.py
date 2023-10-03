@@ -61,6 +61,8 @@ from ..plugins.hook import (
 )
 from ..utilities import resolve_path, load_icon, get_icon_path
 
+from jord.qt_utilities import str_to_check_state
+
 VERBOSE = False
 FORCE_RELOAD = False
 
@@ -101,18 +103,35 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
 
         reconnect_signal(self.enable_dep_hook_button.clicked, self.on_enable_hook)
         reconnect_signal(self.disable_dep_hook_button.clicked, self.on_disable_hook)
-        s = read_project_setting(  # TODO: Use value below
-            "AUTO_ENABLE_DEP_HOOK",
-            defaults=DEFAULT_PROJECT_SETTINGS,
-            project_name=PROJECT_NAME,
-        )
+
         self.auto_enable_check_box.setCheckState(
-            Qt.Checked
-        )  # TODO: IMPLEMENT WITH READ_PROJECT_SETTING
+            str_to_check_state(
+                read_project_setting(  # TODO: Use value below
+                    "AUTO_ENABLE_DEP_HOOK",
+                    defaults=DEFAULT_PROJECT_SETTINGS,
+                    project_name=PROJECT_NAME,
+                )
+            ).value
+        )
 
         reconnect_signal(
             self.auto_enable_check_box.stateChanged, self.on_auto_enable_changed
         )
+
+        self.auto_upgrade_check_box.setCheckState(
+            str_to_check_state(
+                read_project_setting(  # TODO: Use value below
+                    "AUTO_UPGRADE",
+                    defaults=DEFAULT_PROJECT_SETTINGS,
+                    project_name=PROJECT_NAME,
+                )
+            ).value
+        )
+
+        reconnect_signal(
+            self.auto_upgrade_check_box.stateChanged, self.on_auto_upgrade_changed
+        )
+
         reconnect_signal(self.refresh_button.clicked, self.populate_plugin_requirements)
         reconnect_signal(
             self.install_requirements_button.clicked, self.on_install_requirement
@@ -192,6 +211,9 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
 
     def on_auto_enable_changed(self, state):
         store_project_setting("AUTO_ENABLE_DEP_HOOK", state, project_name=PROJECT_NAME)
+
+    def on_auto_upgrade_changed(self, state):
+        store_project_setting("AUTO_UPGRADE", state, project_name=PROJECT_NAME)
 
     def on_enable_hook(self):
         add_plugin_dep_hook()

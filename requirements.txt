@@ -1,6 +1,6 @@
-apppath>=1.0.2 # https://github.com/pything/apppath
-warg>=1.1.7 # https://github.com/pything/warg
-jord>=0.1.1  # https://github.com/aivclab/jord
+apppath>=1.0.4 # https://github.com/pything/apppath
+warg>=1.2.9 # https://github.com/pything/warg
+jord>=0.2.1  # https://github.com/automaps/jord
 poetry>=1.5.1
 #pydevd-pycharm~=231.9011.38
 #importlib_resources

@@ -23,7 +23,6 @@ import json
 import os
 import subprocess
 import sys
-
 from enum import Enum
 from importlib.metadata import Distribution
 from pathlib import Path
@@ -36,6 +35,10 @@ from urllib.request import (
 
 from packaging import version
 from packaging.version import InvalidVersion, Version
+
+from .project_settings import DEFAULT_PROJECT_SETTINGS
+from .settings import read_project_setting
+from .. import PROJECT_NAME
 
 # from warg import is_windows # avoid dependency import not standard python pkgs.
 CUR_OS = sys.platform
@@ -123,7 +126,7 @@ def get_qgis_python_interpreter_path() -> Optional[Path]:
 
 def install_requirements_from_file(
     requirements_path: Path,
-    upgrade: bool = True,
+    upgrade: Optional[bool] = None,
     upgrade_strategy: UpgradeStrategyEnum = UpgradeStrategyEnum.only_if_needed,
 ) -> None:
     """
@@ -134,6 +137,19 @@ def install_requirements_from_file(
     :param requirements_path: Path to requirements.txt file.
     :rtype: None
     """
+    if upgrade is None:
+        try:
+            from jord.qt_utilities import check_state_to_bool
+
+            upgrade = check_state_to_bool(
+                read_project_setting(
+                    "AUTO_UPGRADE",
+                    defaults=DEFAULT_PROJECT_SETTINGS,
+                    project_name=PROJECT_NAME,
+                )
+            )
+        except:
+            print("missing jord")
 
     args = ["install", "-r", str(requirements_path)]
 
@@ -363,7 +379,7 @@ def is_requirement_updatable(requirement_name: str) -> bool:
 
 def install_requirements_from_name(
     *requirements_name: Iterable[str],
-    upgrade: bool = True,
+    upgrade: Optional[bool] = None,
     ignore_editable_installs: bool = True,
 ) -> None:
     """
@@ -377,6 +393,21 @@ def install_requirements_from_name(
 
     # if isinstance(requirements_name, Iterable) and len(requirements_name)==1:
     # ... # handle wrong input format
+
+    if upgrade is None:
+        try:
+            from jord.qt_utilities import check_state_to_bool
+
+            upgrade = check_state_to_bool(
+                read_project_setting(
+                    "AUTO_UPGRADE",
+                    defaults=DEFAULT_PROJECT_SETTINGS,
+                    project_name=PROJECT_NAME,
+                )
+            )
+        except:
+            print("missing jord")
+
     if ignore_editable_installs:
         try:
             from warg import package_is_editable
