@@ -1,7 +1,7 @@
 fail_fast: true
 repos:
-  - repo: https://github.com/ambv/black
-    rev: 23.10.1
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
     hooks:
       - id: black
         exclude: resources.py
