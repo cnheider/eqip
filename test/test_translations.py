@@ -1,4 +1,3 @@
-# coding=utf-8
 """Safe Translations Test.
 
 .. note:: This program is free software; you can redistribute it and/or modify
@@ -49,6 +48,6 @@ class SafeTranslationsTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(SafeTranslationsTest)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(SafeTranslationsTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)

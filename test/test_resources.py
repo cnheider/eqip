@@ -1,4 +1,3 @@
-# coding=utf-8
 """Resources test.
 
 .. note:: This program is free software; you can redistribute it and/or modify
@@ -36,6 +35,6 @@ class EqipDialogTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(EqipResourcesTest)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(EqipResourcesTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)

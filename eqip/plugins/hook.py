@@ -38,7 +38,7 @@ HOOK_ART = """
                                     
 """
 
-HOOK_ART_DISABLED = """
+HOOK_ART_DISABLED = r"""
 
          \          ..   /          
           \         #+  /           

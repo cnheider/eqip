@@ -1,4 +1,3 @@
-# coding=utf-8
 """DockWidget test.
 
 .. note:: This program is free software; you can redistribute it and/or modify
@@ -37,6 +36,6 @@ class EqipDockWidgetTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(EqipDockWidgetTest)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(EqipDockWidgetTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
