@@ -13,6 +13,15 @@ from itertools import count
 
 # noinspection PyUnresolvedReferences
 import qgis
+from jord.qt_utilities import str_to_check_state
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
+
+# noinspection PyUnresolvedReferences
+from qgis.core import QgsProject
+
+# noinspection PyUnresolvedReferences
+from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
 
 # noinspection PyUnresolvedReferences
 from qgis.PyQt import QtGui, uic
@@ -22,45 +31,33 @@ from qgis.PyQt.QtGui import QStandardItem, QStandardItemModel
 
 # noinspection PyUnresolvedReferences
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
-
-# noinspection PyUnresolvedReferences
-from qgis.core import QgsProject
-
-# noinspection PyUnresolvedReferences
-from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
-
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
-
 from warg import get_package_location
 from warg.packages.pip_parsing import get_requirements_from_file
 
+from .. import MANUAL_REQUIREMENTS, PLUGIN_DIR, PROJECT_NAME, VERSION
+from ..plugins import has_requirements_file
+from ..plugins.hook import (
+    HOOK_ART,
+    HOOK_ART_DISABLED,
+    add_plugin_dep_hook,
+    is_hook_active,
+    remove_plugin_dep_hook,
+)
+from ..utilities import get_icon_path, load_icon, resolve_path
 from .piper import (
     append_item_state,
+    get_installed_version,
     install_requirements_from_name,
     is_package_installed,
     remove_requirements_from_name,
     strip_item_state,
-    get_installed_version,
 )
 from .project_settings import DEFAULT_PROJECT_SETTINGS
 from .settings import (
+    read_project_setting,
     restore_default_project_settings,
     store_project_setting,
-    read_project_setting,
 )
-from .. import MANUAL_REQUIREMENTS, PLUGIN_DIR, PROJECT_NAME, VERSION
-from ..plugins import has_requirements_file
-from ..plugins.hook import (
-    add_plugin_dep_hook,
-    remove_plugin_dep_hook,
-    is_hook_active,
-    HOOK_ART_DISABLED,
-    HOOK_ART,
-)
-from ..utilities import resolve_path, load_icon, get_icon_path
-
-from jord.qt_utilities import str_to_check_state
 
 VERBOSE = False
 FORCE_RELOAD = False
@@ -73,9 +70,11 @@ class EqipOptionsPageFactory(QgsOptionsWidgetFactory):
     def __init__(self):
         super().__init__()
 
+    # noinspection PyMethodMayBeStatic
     def icon(self):
         return load_icon("snake_bird.png")
 
+    # noinspection PyPep8Naming
     def createWidget(self, parent):
         return EqipOptionsPage(parent)
 
@@ -98,10 +97,14 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             reload_module("apppath")
             # reload_requirements(PLUGIN_DIR/requirements.txt)
 
-        from jord.qgis_utilities import reconnect_signal
+        from jord.qgis_utilities.helpers import signals
 
-        reconnect_signal(self.enable_dep_hook_button.clicked, self.on_enable_hook)
-        reconnect_signal(self.disable_dep_hook_button.clicked, self.on_disable_hook)
+        signals.reconnect_signal(
+            self.enable_dep_hook_button.clicked, self.on_enable_hook
+        )
+        signals.reconnect_signal(
+            self.disable_dep_hook_button.clicked, self.on_disable_hook
+        )
 
         self.auto_enable_check_box.setCheckState(
             str_to_check_state(
@@ -113,7 +116,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             ).value
         )
 
-        reconnect_signal(
+        signals.reconnect_signal(
             self.auto_enable_check_box.stateChanged, self.on_auto_enable_changed
         )
 
@@ -127,12 +130,14 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             ).value
         )
 
-        reconnect_signal(
+        signals.reconnect_signal(
             self.auto_upgrade_check_box.stateChanged, self.on_auto_upgrade_changed
         )
 
-        reconnect_signal(self.refresh_button.clicked, self.populate_plugin_requirements)
-        reconnect_signal(
+        signals.reconnect_signal(
+            self.refresh_button.clicked, self.populate_plugin_requirements
+        )
+        signals.reconnect_signal(
             self.install_requirements_button.clicked, self.on_install_requirement
         )
 
@@ -157,7 +162,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             self.plugin_selection_combo_box.addItems([*self.plugin_list.values()])
             self.plugin_selection_combo_box.setCurrentIndex(0)
             self.plugin_selection_combo_box.setEditable(False)
-            reconnect_signal(
+            signals.reconnect_signal(
                 self.plugin_selection_combo_box.currentTextChanged,
                 self.on_select_plugin,
             )
@@ -169,14 +174,16 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         # self.requirements_tree_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
 
-        reconnect_signal(
+        signals.reconnect_signal(
             self.populate_environment_button.clicked, self.on_populate_environment
         )
-        reconnect_signal(
+        signals.reconnect_signal(
             self.update_environment_button.clicked, self.on_update_environment
         )
 
-        reconnect_signal(self.reset_options_button.clicked, self.on_reset_options)
+        signals.reconnect_signal(
+            self.reset_options_button.clicked, self.on_reset_options
+        )
 
         # self.editable_install_file_widget
         # self.editable_install_button

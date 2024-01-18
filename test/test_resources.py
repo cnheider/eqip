@@ -35,6 +35,6 @@ class EqipDialogTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(EqipResourcesTest)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(EqipDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)

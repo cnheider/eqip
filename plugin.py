@@ -12,13 +12,13 @@
 import warnings
 
 # noinspection PyUnresolvedReferences
-from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
-
-# noinspection PyUnresolvedReferences
 from qgis.core import QgsSettings
 
 # noinspection PyUnresolvedReferences
 from qgis.gui import QgisInterface
+
+# noinspection PyUnresolvedReferences
+from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
 
 from .eqip import PLUGIN_DIR, PROJECT_NAME
 
@@ -28,9 +28,11 @@ from .resources import *  # Initialize Qt resources from file resources.py # TOD
 assert qt_version
 
 MENU_INSTANCE_NAME = f"&{PROJECT_NAME.lower()}"
+
+DEBUGGING_PORT = 6969
+
 VERBOSE = False
 DEBUGGING = False
-DEBUGGING_PORT = 6969
 FORCE_RELOAD = False
 
 
@@ -49,11 +51,11 @@ class Eqip:
         self.plugin_dir = PLUGIN_DIR
 
         if True:  # BOOTSTRAPPING EQIP ITSELF
+            from .eqip.configuration.pip_parsing import get_requirements_from_file
             from .eqip.configuration.piper import (
                 install_requirements_from_name,
                 is_package_updatable,
             )
-            from .eqip.configuration.pip_parsing import get_requirements_from_file
 
             reqs = [
                 req.name
@@ -73,7 +75,7 @@ class Eqip:
 
             reload_module("warg")
 
-        if DEBUGGING:
+        IGNORE = """if DEBUGGING:
             import pydevd_pycharm
 
             pydevd_pycharm.settrace(
@@ -82,6 +84,7 @@ class Eqip:
                 stdoutToServer=True,
                 stderrToServer=True,
             )
+        """
 
         if isinstance(locale, str):
             locale = locale[0:2]  # locale == "en"
@@ -98,12 +101,9 @@ class Eqip:
 
         self.menu = self.tr(MENU_INSTANCE_NAME)
 
-        from .eqip.configuration.options import (
-            EqipOptionsPageFactory,
-        )
-        from .eqip.configuration.settings import read_project_setting
-
+        from .eqip.configuration.options import EqipOptionsPageFactory
         from .eqip.configuration.project_settings import DEFAULT_PROJECT_SETTINGS
+        from .eqip.configuration.settings import read_project_setting
 
         self.options_factory = EqipOptionsPageFactory()
 

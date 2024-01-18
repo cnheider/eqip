@@ -297,5 +297,3 @@ deploy-to-qgis-repository:
       --allow-uncommitted-changes
       --osgeo-username $OSGEO_USER_NAME
       --osgeo-password $OSGEO_USER_PASSWORD
-
-

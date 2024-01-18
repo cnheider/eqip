@@ -13,8 +13,8 @@ __copyright__ = "Copyright 2022, asd"
 
 import unittest
 
-from ..utilities import get_qgis_app
 from ...eqip.widgets.dock_widget import EqipDockWidget
+from ..utilities import get_qgis_app
 
 QGIS_APP = get_qgis_app()
 

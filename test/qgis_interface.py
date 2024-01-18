@@ -24,10 +24,10 @@ __copyright__ = (
 
 import logging
 
-from jord.qgis_utilities import reconnect_signal
-from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
+from jord.qgis_utilities.helpers import signals
 from qgis.core import QgsMapLayerRegistry
 from qgis.gui import QgsMapCanvasLayer
+from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
 
 LOGGER = logging.getLogger("QGIS")
 
@@ -52,11 +52,17 @@ class QgisInterface(QObject):
         # are added.
         LOGGER.debug("Initialising canvas...")
         # noinspection PyArgumentList
-        reconnect_signal(QgsMapLayerRegistry.instance().layersAdded, self.addLayers)
+        signals.reconnect_signal(
+            QgsMapLayerRegistry.instance().layersAdded, self.addLayers
+        )
         # noinspection PyArgumentList
-        reconnect_signal(QgsMapLayerRegistry.instance().layerWasAdded, self.addLayer)
+        signals.reconnect_signal(
+            QgsMapLayerRegistry.instance().layerWasAdded, self.addLayer
+        )
         # noinspection PyArgumentList
-        reconnect_signal(QgsMapLayerRegistry.instance().removeAll, self.removeAllLayers)
+        signals.reconnect_signal(
+            QgsMapLayerRegistry.instance().removeAll, self.removeAllLayers
+        )
 
         # For processing module
         self.destCrs = None

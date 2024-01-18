@@ -11,7 +11,6 @@ on:
 env:
   QGIS_TEST_VERSION: latest
 
-
 jobs:
   qgis_deps_build:
     runs-on: ubuntu-latest
@@ -21,4 +20,3 @@ jobs:
       - name: docker test
         run: |
           docker run -v $(pwd):/usr/src opengisch/qgis:${QGIS_TEST_VERSION} /usr/src/.docker/run-docker-tests.sh
-    

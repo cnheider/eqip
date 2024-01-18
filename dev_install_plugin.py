@@ -25,7 +25,7 @@ if False:
 
 
 # QTCREATOR (QT) PLUGINS # https://gis.stackexchange.com/questions/367260/how-to-use-all-qgis-3-custom-widgets-in-qt-designer
-"""
+IGNORE = """
 The available QGIS Custom Widgets in Qt Designer are defined in QGIS libqgis_customwidgets.
 
 It is easy to find out the library in use.
@@ -46,7 +46,7 @@ SHORTCUT "Qt Designer with QGIS 3.24.3 custom widgets"
 # pyrcc5 resources.qrc -o resources.py
 
 # and make sure that
-"""
+IGNORE2 = """
  <resources>
   <include location="resources.qrc"/>
  </resources>

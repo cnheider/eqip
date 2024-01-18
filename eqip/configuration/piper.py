@@ -25,19 +25,19 @@ import sys
 from enum import Enum
 from importlib.metadata import Distribution
 from pathlib import Path
-from typing import Iterable, List, Tuple, Optional, Union
+from typing import Iterable, List, Optional, Tuple, Union
 from urllib.error import HTTPError
-from urllib.request import (
+from urllib.request import (  # TODO: should use QgsNetworkAccessManager instead for networking
     Request,
     urlopen,
-)  # TODO: should use QgsNetworkAccessManager instead for networking
+)
 
 from packaging import version
 from packaging.version import InvalidVersion, Version
 
+from .. import PROJECT_NAME
 from .project_settings import DEFAULT_PROJECT_SETTINGS
 from .settings import read_project_setting
-from .. import PROJECT_NAME
 
 # from warg import is_windows # avoid dependency import not standard python pkgs.
 CUR_OS = sys.platform
@@ -160,12 +160,12 @@ def install_requirements_from_file(
 
     """
   other options:
-  
+
   --index-url
 --extra-index-url
 --no-index
 --find-links
-  
+
   --force-reinstall
   --ignore-installed
   --no-deps
@@ -217,14 +217,14 @@ def install_pip_if_not_present(always_upgrade: bool = True):
             )
 
 
-"""
+IGNORE = """
 import pip
 
 def import_or_install(package):
     try:
         __import__(package)
     except ImportError:
-        pip.main(['install', package])    
+        pip.main(['install', package])
 """
 
 

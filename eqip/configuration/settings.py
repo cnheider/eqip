@@ -1,10 +1,11 @@
+import logging
 from logging import warning
-from typing import Optional, Mapping, Any
+from typing import Any, Mapping, Optional
 
 # noinspection PyUnresolvedReferences
 from qgis.core import QgsProject
 
-from eqip.eqip import PROJECT_NAME
+from .. import PROJECT_NAME
 
 qgis_project = QgsProject.instance()
 
@@ -31,7 +32,8 @@ def store_project_setting(key: str, value: Any, *, project_name: str = PROJECT_N
         value = str(value)
         qgis_project.writeEntry(project_name, key, value)
 
-    print(project_name, key, value)
+    if VERBOSE:
+        logging.info(f"Stored in {project_name} settings {key=} {value=}")
 
 
 def read_project_setting(
@@ -74,7 +76,7 @@ def read_project_setting(
     if type_hint is not None:
         val = type_hint(val)
 
-    if False:
+    if VERBOSE:
         if not type_conversion_ok:
             warning(f"read_plugin_setting: {key} {val} {type_conversion_ok}")
 

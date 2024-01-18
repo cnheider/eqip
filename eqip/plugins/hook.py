@@ -10,52 +10,52 @@ __all__ = [
     "HOOK_ART_DISABLED",
 ]
 
-__doc__ = r"""This assume that pyplugin_installer.instance().processDependencies, exists and get called when a new 
+__doc__ = r"""This assume that pyplugin_installer.instance().processDependencies, exists and get called when a new
 plugin is added"""
 
 from ..configuration.piper import install_requirements_from_file
-from .requirement_resolution import has_requirements_file, get_requirements_file_path
+from .requirement_resolution import get_requirements_file_path, has_requirements_file
 
 VERBOSE = True
 HOOK_ART = """
-                                    
-                    ..              
-                    #+              
-                    =#              
-                    .-              
-                     =:             
-                     +:             
-                     =+             
-                     :#.            
-                      #-            
-            -         =*            
-            --        :*.           
-            +%-       :-.           
-           .*-        :=            
-            #+       -+.            
-            .++:...-+=.             
-               ::::.                
-                                    
+
+                    ..
+                    #+
+                    =#
+                    .-
+                     =:
+                     +:
+                     =+
+                     :#.
+                      #-
+            -         =*
+            --        :*.
+            +%-       :-.
+           .*-        :=
+            #+       -+.
+            .++:...-+=.
+               ::::.
+
 """
 
 HOOK_ART_DISABLED = r"""
 
-         \          ..   /          
-          \         #+  /           
-           \        =# /            
-            \       .-/             
-             \       /:             
-              \     /+:             
-               \   / =+             
-                \ /  :#.            
-                 X    #-            
-            -   / \   =*            
-            -- /   \  :*.           
-            +%/     \ :-.           
-           .*/       \:=            
-            /+       -\.            
-           /.++:...-+=.\            
-          /    ::::.    \           
+         \          ..   /
+          \         #+  /
+           \        =# /
+            \       .-/
+             \       /:
+              \     /+:
+               \   / =+
+                \ /  :#.
+                 X    #-
+            -   / \   =*
+            -- /   \  :*.
+            +%/     \ :-.
+           .*/       \:=
+            /+       -\.
+           /.++:...-+=.\
+          /    ::::.    \
 
 """
 
