@@ -1,7 +1,7 @@
 fail_fast: true
 repos:
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
         args: ["--profile", "black", "--filter-files"]
@@ -21,7 +21,7 @@ repos:
         language_version: python3.10
 
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.5
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types: [yaml]
@@ -32,7 +32,7 @@ repos:
       - id: validate-pyproject
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.1
+    rev: v1.8.0
     hooks:
       - id: mypy
         verbose: true
@@ -41,7 +41,7 @@ repos:
         #args: [ --strict ]
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0 # pick a git hash / tag to point to
+    rev: 7.0.0 # pick a git hash / tag to point to
     hooks:
       - id: flake8 # stop the build if there are Python syntax errors or undefined names
         additional_dependencies: [flake8-docstrings]
