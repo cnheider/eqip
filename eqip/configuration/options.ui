@@ -98,7 +98,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="requirements_tab">
       <property name="sizePolicy">
@@ -127,6 +127,13 @@
          </property>
          <property name="wordWrap">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="install_from_file_button">
+         <property name="text">
+          <string>Install From Requirements.txt File</string>
          </property>
         </widget>
        </item>

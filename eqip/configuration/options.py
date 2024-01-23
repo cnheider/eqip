@@ -47,6 +47,7 @@ from ..utilities import get_icon_path, load_icon, resolve_path
 from .piper import (
     append_item_state,
     get_installed_version,
+    install_requirements_from_file,
     install_requirements_from_name,
     is_package_installed,
     remove_requirements_from_name,
@@ -140,6 +141,9 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         signals.reconnect_signal(
             self.install_requirements_button.clicked, self.on_install_requirement
         )
+        signals.reconnect_signal(
+            self.install_from_file_button.clicked, self.on_install_from_file
+        )
 
         if True:  # TODO: Add option for also showing inactive plugins
             if True:
@@ -195,6 +199,11 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.hook_asci_art.setAlignment(Qt.AlignCenter)
         # self.environment_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
+
+    def on_install_from_file(self):
+        install_requirements_from_file(
+            PLUGIN_DIR.parent / self.selected_plugin / "requirements.txt"
+        )
 
     def update_status_labels(self):
         if is_hook_active():
@@ -317,6 +326,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             state_item = QStandardItem(append_item_state(manual_requirement))
 
             name_item.setCheckable(False)
+
             if is_package_installed(manual_requirement):
                 name_item.setCheckState(Qt.Checked)
             else:

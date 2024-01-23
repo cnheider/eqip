@@ -14,16 +14,20 @@ VERBOSE = False
 
 def restore_default_project_settings(
     defaults: Optional[Mapping] = None, *, project_name: str = PROJECT_NAME
-):
+) -> None:
     if defaults is None:
         defaults = {}
+
     for key, value in defaults.items():
         store_project_setting(key, value, project_name=project_name)
 
 
-def store_project_setting(key: str, value: Any, *, project_name: str = PROJECT_NAME):
+def store_project_setting(
+    key: str, value: Any, *, project_name: str = PROJECT_NAME
+) -> None:
     if isinstance(value, bool):
         qgis_project.writeEntryBool(project_name, key, value)
+
     elif isinstance(value, float):
         qgis_project.writeEntryDouble(project_name, key, value)
     # elif isinstance(value, int): # DOES NOT EXIST!
@@ -42,7 +46,7 @@ def read_project_setting(
     *,
     defaults: Mapping = None,
     project_name: str = PROJECT_NAME,
-):
+) -> Any:
     # read values (returns a tuple with the value, and a status boolean
     # which communicates whether the value retrieved could be converted to
     # its type, in these cases a string, an integer, a double and a boolean

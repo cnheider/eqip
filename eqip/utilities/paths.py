@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from typing import Mapping
@@ -51,6 +52,6 @@ def load_icon(*args, **kwargs) -> QIcon:
     if icon.isNull():
         # Returns true if this is a null pixmap; otherwise returns false .
         # A null pixmap has zero width, zero height and no contents. You cannot draw in a null pixmap.
-        print("Did not find icon")
+        logging.error("Did not find icon")
 
     return icon

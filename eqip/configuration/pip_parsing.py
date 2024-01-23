@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import List, Union
 
@@ -8,8 +9,8 @@ try:
     from pip._internal.req import parse_requirements
     from pip._internal.req.req_file import ParsedRequirement
     from pip._internal.utils.packaging import get_requirement
-except ImportError:
-    print("pip version is outdated, please upgrade")
+except ImportError as e:
+    logging.error(f"pip version is outdated, please upgrade, {e}")
 
 from urllib.parse import urlparse
 
@@ -22,6 +23,8 @@ def get_reqed(req: ParsedRequirement) -> Requirement:
     if req.is_editable:  # parse out egg=... fragment from VCS URL
         parsed = urlparse(req_)
         egg_name = parsed.fragment.partition("egg=")[-1]
+        if not egg_name:
+            egg_name = parsed.path.split("/")[-1]
         without_fragment = parsed._replace(fragment="").geturl()
         req_parsed = f"{egg_name} @ {without_fragment}"
     else:
