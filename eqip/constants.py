@@ -1,9 +1,36 @@
 from pathlib import Path
 
-PROJECT_NAME = "Eqip"
+
+def read_author_from_metadata(metadata_file: Path) -> str:
+    with open(metadata_file) as f:
+        for l in f.readlines():
+            if "author=" in l:
+                return l.split("=")[-1].strip()
+    raise Exception(f"Did not find version in {metadata_file=}")
+
+
+def read_project_name_from_metadata(metadata_file: Path) -> str:
+    with open(metadata_file) as f:
+        for l in f.readlines():
+            if "name=" in l:
+                return l.split("=")[-1].strip()
+    raise Exception(f"Did not find version in {metadata_file=}")
+
+
+def read_version_from_metadata(metadata_file: Path) -> str:
+    with open(metadata_file) as f:
+        for l in f.readlines():
+            if "version=" in l:
+                return l.split("=")[-1].strip()
+    raise Exception(f"Did not find version in {metadata_file=}")
+
+
 PLUGIN_DIR = Path(__file__).parent.parent
-VERSION = "0.0.2"
-PLUGIN_AUTHOR = "Heider"
+METADATA_FILE = PLUGIN_DIR / "metadata.txt"
+
+PROJECT_NAME = read_project_name_from_metadata(METADATA_FILE)
+VERSION = read_version_from_metadata(METADATA_FILE)
+PLUGIN_AUTHOR = read_author_from_metadata(METADATA_FILE)
 
 MANUAL_REQUIREMENTS = [
     "qgis"
@@ -13,7 +40,9 @@ MANUAL_REQUIREMENTS = [
 try:
     from apppath import AppPath
 
-    PROJECT_APP_PATH = AppPath(PROJECT_NAME, PLUGIN_AUTHOR, VERSION)
+    PROJECT_APP_PATH = AppPath(
+        PROJECT_NAME, app_author=PLUGIN_AUTHOR, app_version=VERSION
+    )
 except:
     PROJECT_APP_PATH = None
 
