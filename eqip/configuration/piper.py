@@ -51,11 +51,11 @@ IS_MAC = CUR_OS.startswith("darwin")
 def catching_callable(*args, **kwargs):
     try:
         # subprocess.check_call(*args, **kwargs)
-        subprocess.check_output(*args, **kwargs)
+        output = subprocess.check_output(*args, **kwargs)
         # subprocess.run(*args,**kwargs)
     except subprocess.CalledProcessError as e:
-        print((e.stderr, e.stdout, e))
-        # logging.error((e.stderr, e.stdout, e))
+        output = (e.stderr, e.stdout, e)
+    logging.warning(output)
 
 
 SP_CALLABLE = catching_callable  # subprocess.call
