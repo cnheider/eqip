@@ -13,4 +13,4 @@ set VSI_CACHE_SIZE=1000000
 set QT_PLUGIN_PATH=%OSGEO4W_ROOT%\apps\qgis\qtplugins;%OSGEO4W_ROOT%\apps\qt5\plugins
 set PYTHONPATH=%OSGEO4W_ROOT%\apps\qgis\python;%PYTHONPATH%
 
-python3 -m pip install -r "path\to\your\requirements-dev.txt"
+python3 -m pip install -r "requirements-dev.txt"

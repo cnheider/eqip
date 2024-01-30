@@ -40,9 +40,7 @@ MANUAL_REQUIREMENTS = [
 try:
     from apppath import AppPath
 
-    PROJECT_APP_PATH = AppPath(
-        PROJECT_NAME, app_author=PLUGIN_AUTHOR, app_version=VERSION
-    )
+    PROJECT_APP_PATH = AppPath(PROJECT_NAME, app_author=PLUGIN_AUTHOR)
 except:
     PROJECT_APP_PATH = None
 

@@ -13,7 +13,6 @@ from itertools import count
 
 # noinspection PyUnresolvedReferences
 import qgis
-from jord.qt_utilities import str_to_check_state
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 
@@ -31,8 +30,6 @@ from qgis.PyQt.QtGui import QStandardItem, QStandardItemModel
 
 # noinspection PyUnresolvedReferences
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
-from warg import get_package_location
-from warg.packages.pip_parsing import get_requirements_from_file
 
 from .. import MANUAL_REQUIREMENTS, PLUGIN_DIR, PROJECT_NAME, VERSION
 from ..plugins import has_requirements_file
@@ -75,7 +72,7 @@ class EqipOptionsPageFactory(QgsOptionsWidgetFactory):
     def icon(self):
         return load_icon("snake_bird.png")
 
-    # noinspection PyPep8Naming
+    # noinspection PyPep8Naming,PyMethodMayBeStatic
     def createWidget(self, parent):
         return EqipOptionsPage(parent)
 
@@ -106,6 +103,8 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         signals.reconnect_signal(
             self.disable_dep_hook_button.clicked, self.on_disable_hook
         )
+
+        from jord.qt_utilities import str_to_check_state
 
         self.auto_enable_check_box.setCheckState(
             str_to_check_state(
@@ -284,6 +283,12 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
 
         self.requirements_list_model = QStandardItemModel(self.requirements_tree_view)
 
+        from warg import get_package_location
+
+        from .pip_parsing import get_requirements_from_file  # TOOD: USE WARG VERSION
+
+        # from warg.packages.pip_parsing import get_requirements_from_file
+
         for requirement in get_requirements_from_file(
             PLUGIN_DIR.parent / self.selected_plugin / "requirements.txt"
         ):
@@ -295,6 +300,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             required_version_item = QStandardItem(
                 ", ".join([str(s) for s in requirement.specifier])
             )
+
             extras_item = QStandardItem(f"[{', '.join(requirement.extras)}]")
             location_item = QStandardItem(str(get_package_location(requirement.name)))
 

@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Mapping
 
 from qgis.PyQt.QtGui import QIcon
-from warg import passes_kws_to
 
 from .. import PROJECT_NAME
 from ..configuration.project_settings import DEFAULT_PROJECT_SETTINGS
@@ -45,7 +44,7 @@ def get_icon_path(
     return f"{resource_path}/icons/{icon_file_name}"
 
 
-@passes_kws_to(get_icon_path)
+# @passes_kws_to(get_icon_path)
 def load_icon(*args, **kwargs) -> QIcon:
     icon = QIcon(get_icon_path(*args, **kwargs))
 

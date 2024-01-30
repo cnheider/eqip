@@ -30,7 +30,10 @@ def get_reqed(req: ParsedRequirement) -> Requirement:
     else:
         req_parsed = req_
 
-    return get_requirement(req_parsed)
+    try:
+        return get_requirement(req_parsed)
+    except:
+        return None
 
 
 def get_requirements_from_file(
@@ -39,7 +42,12 @@ def get_requirements_from_file(
     """Turn requirements.txt into a list"""
     if isinstance(file_path, Path):
         file_path = str(file_path)
-    return [get_reqed(ir) for ir in parse_requirements(file_path, session=session)]
+
+    parsed_reqs = [
+        get_reqed(ir) for ir in parse_requirements(file_path, session=session)
+    ]
+
+    return [p for p in parsed_reqs if p]
 
 
 if __name__ == "__main__":
