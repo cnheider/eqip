@@ -150,9 +150,9 @@ def install_requirements_from_file(
                 requirements_file_parent_directory.replace("\\", "/")
             )
 
-    os.environ[
-        "REQUIREMENTS_FILE_PARENT_DIRECTORY"
-    ] = requirements_file_parent_directory
+    os.environ["REQUIREMENTS_FILE_PARENT_DIRECTORY"] = (
+        requirements_file_parent_directory
+    )
 
     if upgrade is None:
         try:
@@ -383,8 +383,7 @@ def get_versions_from_index(
             return None
 
 
-def pip_freeze_list() -> List:
-    ...
+def pip_freeze_list() -> List: ...
 
 
 def is_requirement_updatable(requirement_name: str) -> bool:
