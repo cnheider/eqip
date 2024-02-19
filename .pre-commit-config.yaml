@@ -7,15 +7,15 @@ repos:
         args: ["--profile", "black", "--filter-files"]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
+    rev: v3.15.1
     hooks:
       - id: pyupgrade
         args:
           - --py38-plus
           - --keep-runtime-typing
 
-  - repo: https://github.com/ambv/black
-    rev: 23.12.1
+  - repo: https://github.com/psf/black
+    rev: 24.2.0
     hooks:
       - id: black
         language_version: python3.10
@@ -27,7 +27,7 @@ repos:
         types: [yaml]
 
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.15
+    rev: v0.16
     hooks:
       - id: validate-pyproject
 
