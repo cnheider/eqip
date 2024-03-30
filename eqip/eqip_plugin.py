@@ -17,10 +17,7 @@ from qgis.core import QgsSettings
 # noinspection PyUnresolvedReferences
 from qgis.gui import QgisInterface
 
-# noinspection PyUnresolvedReferences
-from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
-
-from .eqip import PLUGIN_DIR, PROJECT_NAME
+from eqip import PLUGIN_DIR, PROJECT_NAME
 
 # noinspection PyUnresolvedReferences
 from .resources import *  # Initialize Qt resources from file resources.py # TODO: MAKE AN ASSERT ON THIS BEING IMPORTED? maybe add to devpack dev-tools
@@ -36,7 +33,7 @@ DEBUGGING = False
 FORCE_RELOAD = False
 
 
-class Eqip:
+class EqipPlugin:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface: QgisInterface):

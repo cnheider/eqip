@@ -10,7 +10,7 @@ if is_windows():
 else:
     b = QGIS_APP_PATH.user_data
 
-source_folder = Path(__file__).parent.absolute()
+source_folder = Path(__file__).parent.absolute() / "eqip"
 target_folder = b / "profiles" / PROFILE / "python" / "plugins" / source_folder.stem
 
 if False:

@@ -1,10 +1,10 @@
-![icon](icon.png)
+![icon](eqip/icon.png)
 
 # Eqip
 
 Install pip package for within QGIS.
 
-![demo](images/demo.png)
+![demo](eqip/images/demo.png)
 
 
 ## SETUP
@@ -37,4 +37,4 @@ Open Qgis and go to Plugins > Add > Repository > URL: http://10.0.52.7:5000/qgis
 
 Click Ok
 
-Navigate to All plugins find Eqip and install
+Navigate to All plugins find Eqip and install 

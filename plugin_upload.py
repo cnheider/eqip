@@ -103,8 +103,8 @@ if __name__ == "__main__":
         options.server = SERVER
     if not options.port:
         options.port = PORT
-    if not options.username:
-        # interactive mode
+    if not options.username:  # interactive mode
+
         username = getpass.getuser()
         print(f"Please enter user name [{username}] :", end=" ")
 
@@ -113,6 +113,6 @@ if __name__ == "__main__":
             options.username = res
         else:
             options.username = username
-    if not options.password:
-        # interactive mode
+    if not options.password:  # interactive mode
+
         options.password = getpass.getpass()
