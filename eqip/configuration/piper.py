@@ -50,6 +50,8 @@ IS_MAC = CUR_OS.startswith("darwin")
 # @passes_kws_to(subprocess.check_call)
 def catching_callable(*args, **kwargs):
     try:
+        logging.warning(f"{list(args)}, {list(kwargs.items())}")
+
         # subprocess.check_call(*args, **kwargs)
         output = subprocess.check_output(*args, **kwargs)
         # subprocess.run(*args,**kwargs)
@@ -141,6 +143,9 @@ def install_requirements_from_file(
     :param requirements_path: Path to requirements.txt file.
     :rtype: None
     """
+    if not isinstance(requirements_path, Path):
+        requirements_path = Path(requirements_path)
+
     requirements_file_parent_directory = str(requirements_path.parent.as_posix())
 
     if False:
@@ -181,6 +186,12 @@ def install_requirements_from_file(
 
     if upgrade:
         args += ["--upgrade"]
+
+    if True:
+        args += ["--ignore-installed"]
+
+    if False:
+        args += ["--force-reinstall"]
 
     if upgrade_strategy:
         args += ["--upgrade-strategy", upgrade_strategy.value]
@@ -319,7 +330,10 @@ def get_installed_version(
 
 def get_newest_version(requirement_name: str) -> Optional[version.Version]:
     try:
-        return version.parse(get_versions_from_index(requirement_name)[-1])
+        version_from_index = get_versions_from_index(requirement_name)
+        if version_from_index:
+            return version.parse(version_from_index[-1])
+        return None
     except HTTPError:
         return None
 
@@ -408,14 +422,14 @@ def is_requirement_updatable(requirement_name: str) -> bool:
 
 
 def install_requirements_from_name(
-    *requirements_name: Iterable[str],
+    *requirement_names: str,
     upgrade: Optional[bool] = None,
     ignore_editable_installs: bool = True,
 ) -> None:
     """
     Install requirements from names.
 
-    :param requirements_name: Name of requirements.
+    :param requirement_names: Name of requirements.
     :param ignore_editable_installs: If an installation is editable do not change
     :param upgrade: Whether to upgrade already installed packages
     """
@@ -442,15 +456,15 @@ def install_requirements_from_name(
         try:
             from warg import package_is_editable
 
-            requirements_name = [
-                r for r in requirements_name if not package_is_editable(r)
+            requirement_names = [
+                r for r in requirement_names if not package_is_editable(r)
             ]
         except (ImportError, ModuleNotFoundError) as e:
             print(f"missing module, not checking for editable install, {e}")
 
     # --index-url
     # --upgrade-strategy <upgrade_strategy>
-    args = ["install", *requirements_name]
+    args = ["install", *requirement_names]
     # args = ["install", "rasterio", "--upgrade"] # RASTERIO for window DOES NOT WORK ATM, should be installed manually
 
     # TODO: ADD OPTION TO PICK INDEX

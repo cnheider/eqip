@@ -24,7 +24,6 @@ __copyright__ = (
 
 import logging
 
-from jord.qgis_utilities.helpers import signals
 from qgis.core import QgsMapLayerRegistry
 from qgis.gui import QgsMapCanvasLayer
 from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -51,6 +50,9 @@ class QgisInterface(QObject):
         # Set up slots so we can mimic the behaviour of QGIS when layers
         # are added.
         LOGGER.debug("Initialising canvas...")
+
+        from jord.qgis_utilities.helpers import signals
+
         # noinspection PyArgumentList
         signals.reconnect_signal(
             QgsMapLayerRegistry.instance().layersAdded, self.addLayers
