@@ -9,26 +9,17 @@ repos:
           - --py38-plus
           - --keep-runtime-typing
 
-  - repo: https://github.com/ambv/black
-    rev: 24.2.0
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
       - id: isort
         args: ["--profile", "black", "--filter-files"]
 
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.1
-    hooks:
-      - id: pyupgrade
-        args:
-          - --py38-plus
-          - --keep-runtime-typing
-
   - repo: https://github.com/psf/black
     rev: 24.2.0
     hooks:
       - id: black
+        exclude: resources.py
         language_version: python3.10
 
   - repo: https://github.com/pre-commit/mirrors-prettier
