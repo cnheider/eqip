@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
  eqip
 
@@ -13,26 +12,28 @@
 import warnings
 
 # noinspection PyUnresolvedReferences
-from qgis.PyQt.QtCore import QCoreApplication, QLocale, QTranslator
-
-# noinspection PyUnresolvedReferences
 from qgis.core import QgsSettings
 
 # noinspection PyUnresolvedReferences
 from qgis.gui import QgisInterface
 
-from .eqip import PLUGIN_DIR, PROJECT_NAME
+from eqip import PLUGIN_DIR, PROJECT_NAME
 
 # noinspection PyUnresolvedReferences
 from .resources import *  # Initialize Qt resources from file resources.py # TODO: MAKE AN ASSERT ON THIS BEING IMPORTED? maybe add to devpack dev-tools
 
+assert qt_version
+
 MENU_INSTANCE_NAME = f"&{PROJECT_NAME.lower()}"
-VERBOSE = False
-DEBUGGING = False
+
 DEBUGGING_PORT = 6969
 
+VERBOSE = False
+DEBUGGING = False
+FORCE_RELOAD = False
 
-class Eqip:
+
+class EqipPlugin:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface: QgisInterface):
@@ -47,11 +48,11 @@ class Eqip:
         self.plugin_dir = PLUGIN_DIR
 
         if True:  # BOOTSTRAPPING EQIP ITSELF
+            from .eqip.configuration.pip_parsing import get_requirements_from_file
             from .eqip.configuration.piper import (
                 install_requirements_from_name,
                 is_package_updatable,
             )
-            from .eqip.configuration.pip_parsing import get_requirements_from_file
 
             reqs = [
                 req.name
@@ -66,7 +67,12 @@ class Eqip:
             f"{PROJECT_NAME}/locale/userLocale", QLocale().name()
         )
 
-        if DEBUGGING:
+        if VERBOSE or DEBUGGING or FORCE_RELOAD:  # reload warg
+            from warg import reload_module
+
+            reload_module("warg")
+
+        IGNORE = """if DEBUGGING:
             import pydevd_pycharm
 
             pydevd_pycharm.settrace(
@@ -75,6 +81,7 @@ class Eqip:
                 stdoutToServer=True,
                 stderrToServer=True,
             )
+        """
 
         if isinstance(locale, str):
             locale = locale[0:2]  # locale == "en"
@@ -91,12 +98,9 @@ class Eqip:
 
         self.menu = self.tr(MENU_INSTANCE_NAME)
 
-        from .eqip.configuration.options import (
-            EqipOptionsPageFactory,
-        )
-        from .eqip.configuration.settings import read_project_setting
-
+        from .eqip.configuration.options import EqipOptionsPageFactory
         from .eqip.configuration.project_settings import DEFAULT_PROJECT_SETTINGS
+        from .eqip.configuration.settings import read_project_setting
 
         self.options_factory = EqipOptionsPageFactory()
 

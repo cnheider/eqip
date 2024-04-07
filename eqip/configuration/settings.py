@@ -1,10 +1,11 @@
+import logging
 from logging import warning
-from typing import Optional, Mapping, Any
+from typing import Any, Mapping, Optional
 
 # noinspection PyUnresolvedReferences
 from qgis.core import QgsProject
 
-from eqip.eqip import PROJECT_NAME
+from .. import PROJECT_NAME
 
 qgis_project = QgsProject.instance()
 
@@ -13,16 +14,20 @@ VERBOSE = False
 
 def restore_default_project_settings(
     defaults: Optional[Mapping] = None, *, project_name: str = PROJECT_NAME
-):
+) -> None:
     if defaults is None:
         defaults = {}
+
     for key, value in defaults.items():
         store_project_setting(key, value, project_name=project_name)
 
 
-def store_project_setting(key: str, value: Any, *, project_name: str = PROJECT_NAME):
+def store_project_setting(
+    key: str, value: Any, *, project_name: str = PROJECT_NAME
+) -> None:
     if isinstance(value, bool):
         qgis_project.writeEntryBool(project_name, key, value)
+
     elif isinstance(value, float):
         qgis_project.writeEntryDouble(project_name, key, value)
     # elif isinstance(value, int): # DOES NOT EXIST!
@@ -31,7 +36,8 @@ def store_project_setting(key: str, value: Any, *, project_name: str = PROJECT_N
         value = str(value)
         qgis_project.writeEntry(project_name, key, value)
 
-    print(project_name, key, value)
+    if VERBOSE:
+        logging.info(f"Stored in {project_name} settings {key=} {value=}")
 
 
 def read_project_setting(
@@ -40,7 +46,7 @@ def read_project_setting(
     *,
     defaults: Mapping = None,
     project_name: str = PROJECT_NAME,
-):
+) -> Any:
     # read values (returns a tuple with the value, and a status boolean
     # which communicates whether the value retrieved could be converted to
     # its type, in these cases a string, an integer, a double and a boolean
@@ -74,7 +80,7 @@ def read_project_setting(
     if type_hint is not None:
         val = type_hint(val)
 
-    if False:
+    if VERBOSE:
         if not type_conversion_ok:
             warning(f"read_plugin_setting: {key} {val} {type_conversion_ok}")
 

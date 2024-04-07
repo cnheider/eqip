@@ -1,4 +1,3 @@
-# coding=utf-8
 """DockWidget test.
 
 .. note:: This program is free software; you can redistribute it and/or modify
@@ -14,8 +13,8 @@ __copyright__ = "Copyright 2022, asd"
 
 import unittest
 
-from ..utilities import get_qgis_app
 from ...eqip.widgets.dock_widget import EqipDockWidget
+from ..utilities import get_qgis_app
 
 QGIS_APP = get_qgis_app()
 
@@ -37,6 +36,6 @@ class EqipDockWidgetTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(EqipDockWidgetTest)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(EqipDockWidgetTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)

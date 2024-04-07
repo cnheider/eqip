@@ -10,7 +10,7 @@ if is_windows():
 else:
     b = QGIS_APP_PATH.user_data
 
-source_folder = Path(__file__).parent.absolute()
+source_folder = Path(__file__).parent.absolute() / "eqip"
 target_folder = b / "profiles" / PROFILE / "python" / "plugins" / source_folder.stem
 
 if False:
@@ -25,20 +25,20 @@ if False:
 
 
 # QTCREATOR (QT) PLUGINS # https://gis.stackexchange.com/questions/367260/how-to-use-all-qgis-3-custom-widgets-in-qt-designer
-"""
+IGNORE = """
 The available QGIS Custom Widgets in Qt Designer are defined in QGIS libqgis_customwidgets.
 
 It is easy to find out the library in use.
 
 Go to Qt Designer → Help → About Plugins. You will see the QGIS library in use.
 INSTALL PLUGIN
-USE PATH "C:\OSGeo4W\apps\qgis\qtplugins\designer\qgis_customwidgets.dll"
+USE PATH "C:\\OSGeo4W\apps\\qgis\\qtplugins\\designer\\qgis_customwidgets.dll"
 
 ABOVE DOES NOT WORK!!
 
 USE instead
 SHORTCUT "Qt Designer with QGIS 3.24.3 custom widgets"
-"C:\Program Files\QGIS 3.24.3\bin\bgspawn.exe" "C:\PROGRA~1\QGIS 3.24.3\bin\qgis-designer.bat"
+"C:\\Program Files\\QGIS 3.24.3\bin\bgspawn.exe" "C:\\PROGRA~1\\QGIS 3.24.3\bin\\qgis-designer.bat"
 
 """
 
@@ -46,7 +46,7 @@ SHORTCUT "Qt Designer with QGIS 3.24.3 custom widgets"
 # pyrcc5 resources.qrc -o resources.py
 
 # and make sure that
-"""
+IGNORE2 = """
  <resources>
   <include location="resources.qrc"/>
  </resources>

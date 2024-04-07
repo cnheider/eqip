@@ -1,4 +1,3 @@
-# coding=utf-8
 """Tests QGIS plugin init."""
 
 __author__ = "Tim Sutton <tim@linfiniti.com>"
@@ -56,7 +55,7 @@ class TestInit(unittest.TestCase):
         metadata.extend(parser.items("general"))
 
         for expectation in required_metadata:
-            message = 'Cannot find metadata "%s" in metadata source (%s).' % (
+            message = 'Cannot find metadata "{}" in metadata source ({}).'.format(
                 expectation,
                 file_path,
             )

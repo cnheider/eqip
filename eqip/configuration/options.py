@@ -1,5 +1,4 @@
 # !/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 __author__ = "heider"
 __doc__ = r"""
@@ -14,6 +13,14 @@ from itertools import count
 
 # noinspection PyUnresolvedReferences
 import qgis
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
+
+# noinspection PyUnresolvedReferences
+from qgis.core import QgsProject
+
+# noinspection PyUnresolvedReferences
+from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
 
 # noinspection PyUnresolvedReferences
 from qgis.PyQt import QtGui, uic
@@ -24,19 +31,20 @@ from qgis.PyQt.QtGui import QStandardItem, QStandardItemModel
 # noinspection PyUnresolvedReferences
 from qgis.PyQt.QtWidgets import QHBoxLayout, QMessageBox
 
-# noinspection PyUnresolvedReferences
-from qgis.core import QgsProject
-
-# noinspection PyUnresolvedReferences
-from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
-
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
-
-from warg import get_requirements_from_file, get_package_location
-
+from .. import MANUAL_REQUIREMENTS, PLUGIN_DIR, PROJECT_NAME, VERSION
+from ..plugins import has_requirements_file
+from ..plugins.hook import (
+    HOOK_ART,
+    HOOK_ART_DISABLED,
+    add_plugin_dep_hook,
+    is_hook_active,
+    remove_plugin_dep_hook,
+)
+from ..utilities import get_icon_path, load_icon, resolve_path
 from .piper import (
     append_item_state,
+    get_installed_version,
+    install_requirements_from_file,
     install_requirements_from_name,
     is_package_installed,
     remove_requirements_from_name,
@@ -44,22 +52,13 @@ from .piper import (
 )
 from .project_settings import DEFAULT_PROJECT_SETTINGS
 from .settings import (
+    read_project_setting,
     restore_default_project_settings,
     store_project_setting,
-    read_project_setting,
 )
-from .. import MANUAL_REQUIREMENTS, PLUGIN_DIR, PROJECT_NAME, VERSION
-from ..plugins import has_requirements_file
-from ..plugins.hook import (
-    add_plugin_dep_hook,
-    remove_plugin_dep_hook,
-    is_hook_active,
-    HOOK_ART_DISABLED,
-    HOOK_ART,
-)
-from ..utilities import resolve_path, load_icon, get_icon_path
 
 VERBOSE = False
+FORCE_RELOAD = False
 
 qgis_project = QgsProject.instance()
 OptionWidget, OptionWidgetBase = uic.loadUiType(resolve_path("options.ui", __file__))
@@ -69,9 +68,11 @@ class EqipOptionsPageFactory(QgsOptionsWidgetFactory):
     def __init__(self):
         super().__init__()
 
+    # noinspection PyMethodMayBeStatic
     def icon(self):
         return load_icon("snake_bird.png")
 
+    # noinspection PyPep8Naming,PyMethodMayBeStatic
     def createWidget(self, parent):
         return EqipOptionsPage(parent)
 
@@ -86,7 +87,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.sponsor_label.setPixmap(QtGui.QPixmap(get_icon_path("pypi.png")))
         self.version_label.setText(f"{VERSION}")
 
-        if VERBOSE:  # TODO: Auto-reload development installs
+        if VERBOSE or FORCE_RELOAD:  # TODO: Auto-reload development installs
             from warg import reload_module
 
             reload_module("jord")
@@ -94,25 +95,53 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             reload_module("apppath")
             # reload_requirements(PLUGIN_DIR/requirements.txt)
 
-        from jord.qgis_utilities import reconnect_signal
+        from jord.qgis_utilities.helpers import signals
 
-        reconnect_signal(self.enable_dep_hook_button.clicked, self.on_enable_hook)
-        reconnect_signal(self.disable_dep_hook_button.clicked, self.on_disable_hook)
-        s = read_project_setting(  # TODO: Use value below
-            "AUTO_ENABLE_DEP_HOOK",
-            defaults=DEFAULT_PROJECT_SETTINGS,
-            project_name=PROJECT_NAME,
+        signals.reconnect_signal(
+            self.enable_dep_hook_button.clicked, self.on_enable_hook
         )
-        self.auto_enable_check_box.setCheckState(
-            Qt.Checked
-        )  # TODO: IMPLEMENT WITH READ_PROJECT_SETTING
+        signals.reconnect_signal(
+            self.disable_dep_hook_button.clicked, self.on_disable_hook
+        )
 
-        reconnect_signal(
+        from jord.qt_utilities import str_to_check_state
+
+        self.auto_enable_check_box.setCheckState(
+            str_to_check_state(
+                read_project_setting(  # TODO: Use value below
+                    "AUTO_ENABLE_DEP_HOOK",
+                    defaults=DEFAULT_PROJECT_SETTINGS,
+                    project_name=PROJECT_NAME,
+                )
+            ).value
+        )
+
+        signals.reconnect_signal(
             self.auto_enable_check_box.stateChanged, self.on_auto_enable_changed
         )
-        reconnect_signal(self.refresh_button.clicked, self.populate_plugin_requirements)
-        reconnect_signal(
+
+        self.auto_upgrade_check_box.setCheckState(
+            str_to_check_state(
+                read_project_setting(  # TODO: Use value below
+                    "AUTO_UPGRADE",
+                    defaults=DEFAULT_PROJECT_SETTINGS,
+                    project_name=PROJECT_NAME,
+                )
+            ).value
+        )
+
+        signals.reconnect_signal(
+            self.auto_upgrade_check_box.stateChanged, self.on_auto_upgrade_changed
+        )
+
+        signals.reconnect_signal(
+            self.refresh_button.clicked, self.populate_plugin_requirements
+        )
+        signals.reconnect_signal(
             self.install_requirements_button.clicked, self.on_install_requirement
+        )
+        signals.reconnect_signal(
+            self.install_from_file_button.clicked, self.on_install_from_file
         )
 
         if True:  # TODO: Add option for also showing inactive plugins
@@ -136,7 +165,7 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
             self.plugin_selection_combo_box.addItems([*self.plugin_list.values()])
             self.plugin_selection_combo_box.setCurrentIndex(0)
             self.plugin_selection_combo_box.setEditable(False)
-            reconnect_signal(
+            signals.reconnect_signal(
                 self.plugin_selection_combo_box.currentTextChanged,
                 self.on_select_plugin,
             )
@@ -148,19 +177,32 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         # self.requirements_tree_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
 
-        reconnect_signal(
+        signals.reconnect_signal(
             self.populate_environment_button.clicked, self.on_populate_environment
         )
-        reconnect_signal(
+        signals.reconnect_signal(
             self.update_environment_button.clicked, self.on_update_environment
         )
 
-        reconnect_signal(self.reset_options_button.clicked, self.on_reset_options)
+        signals.reconnect_signal(
+            self.reset_options_button.clicked, self.on_reset_options
+        )
+
+        # self.editable_install_file_widget
+        # self.editable_install_button
+
+        # reconnect_signal(self.search_button.clicked,self.on_search_button_clicked())
+        # self.search_line_edit
 
         self.update_status_labels()
         self.hook_asci_art.setAlignment(Qt.AlignCenter)
         # self.environment_list_view.editTriggers.register() # Change text when to append (Pending) until apply has been
         # pressed
+
+    def on_install_from_file(self):
+        install_requirements_from_file(
+            PLUGIN_DIR.parent / self.selected_plugin / "requirements.txt"
+        )
 
     def update_status_labels(self):
         if is_hook_active():
@@ -183,6 +225,9 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
 
     def on_auto_enable_changed(self, state):
         store_project_setting("AUTO_ENABLE_DEP_HOOK", state, project_name=PROJECT_NAME)
+
+    def on_auto_upgrade_changed(self, state):
+        store_project_setting("AUTO_UPGRADE", state, project_name=PROJECT_NAME)
 
     def on_enable_hook(self):
         add_plugin_dep_hook()
@@ -238,15 +283,24 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
 
         self.requirements_list_model = QStandardItemModel(self.requirements_tree_view)
 
+        from warg import get_package_location
+
+        from .pip_parsing import get_requirements_from_file  # TOOD: USE WARG VERSION
+
+        # from warg.packages.pip_parsing import get_requirements_from_file
+
         for requirement in get_requirements_from_file(
             PLUGIN_DIR.parent / self.selected_plugin / "requirements.txt"
         ):
             name_item = QStandardItem(requirement.name)
-            current_version_item = QStandardItem("0")
+            current_version_item = QStandardItem(
+                str(get_installed_version(requirement.name))
+            )
             state_item = QStandardItem(append_item_state(requirement.name))
             required_version_item = QStandardItem(
                 ", ".join([str(s) for s in requirement.specifier])
             )
+
             extras_item = QStandardItem(f"[{', '.join(requirement.extras)}]")
             location_item = QStandardItem(str(get_package_location(requirement.name)))
 
@@ -272,10 +326,13 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         for manual_requirement in MANUAL_REQUIREMENTS:
             # n = f'{append_item_state(r.name)} (Manual)'
             name_item = QStandardItem(manual_requirement)
-            current_version_item = QStandardItem("0")
+            current_version_item = QStandardItem(
+                str(get_installed_version(manual_requirement))
+            )
             state_item = QStandardItem(append_item_state(manual_requirement))
 
             name_item.setCheckable(False)
+
             if is_package_installed(manual_requirement):
                 name_item.setCheckState(Qt.Checked)
             else:
@@ -315,7 +372,10 @@ class EqipOptionsWidget(OptionWidgetBase, OptionWidget):
         self.environment_list_model = QStandardItemModel(self.environment_list_view)
 
         if True:
-            for l in [r.name for r in metadata.Distribution().discover()]:
+            for l in [
+                r.name if hasattr(r, "name") else str(r)
+                for r in metadata.Distribution().discover()
+            ]:
                 n = append_item_state(l)
 
                 if len(self.environment_list_model.findItems(n)) < 1:

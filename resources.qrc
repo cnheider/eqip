@@ -1,7 +1,7 @@
 <RCC>
-  <qresource prefix="eqip">
-    <file>icon.png</file>
-    <file>icons/snake_bird.png</file>
-    <file>icons/pypi.png</file>
+  <qresource>
+    <file>eqip/icon.png</file>
+    <file>eqip/icons/snake_bird.png</file>
+    <file>eqip/icons/pypi.png</file>
   </qresource>
 </RCC>

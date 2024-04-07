@@ -1,4 +1,3 @@
-# coding=utf-8
 """QGIS plugin implementation.
 
 .. note:: This program is free software; you can redistribute it and/or modify
@@ -25,10 +24,9 @@ __copyright__ = (
 
 import logging
 
-from jord.qgis_utilities import reconnect_signal
-from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
 from qgis.core import QgsMapLayerRegistry
 from qgis.gui import QgsMapCanvasLayer
+from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
 
 LOGGER = logging.getLogger("QGIS")
 
@@ -52,12 +50,21 @@ class QgisInterface(QObject):
         # Set up slots so we can mimic the behaviour of QGIS when layers
         # are added.
         LOGGER.debug("Initialising canvas...")
+
+        from jord.qgis_utilities.helpers import signals
+
         # noinspection PyArgumentList
-        reconnect_signal(QgsMapLayerRegistry.instance().layersAdded, self.addLayers)
+        signals.reconnect_signal(
+            QgsMapLayerRegistry.instance().layersAdded, self.addLayers
+        )
         # noinspection PyArgumentList
-        reconnect_signal(QgsMapLayerRegistry.instance().layerWasAdded, self.addLayer)
+        signals.reconnect_signal(
+            QgsMapLayerRegistry.instance().layerWasAdded, self.addLayer
+        )
         # noinspection PyArgumentList
-        reconnect_signal(QgsMapLayerRegistry.instance().removeAll, self.removeAllLayers)
+        signals.reconnect_signal(
+            QgsMapLayerRegistry.instance().removeAll, self.removeAllLayers
+        )
 
         # For processing module
         self.destCrs = None

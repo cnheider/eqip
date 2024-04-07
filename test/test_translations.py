@@ -1,4 +1,3 @@
-# coding=utf-8
 """Safe Translations Test.
 
 .. note:: This program is free software; you can redistribute it and/or modify
@@ -7,14 +6,15 @@
      (at your option) any later version.
 
 """
+
 from .utilities import get_qgis_app
 
 __author__ = "ismailsunni@yahoo.co.id"
 __date__ = "12/10/2011"
 __copyright__ = "Copyright 2012, Australia Indonesia Facility for " "Disaster Reduction"
 
-import unittest
 import os
+import unittest
 
 from qgis.PyQt.QtCore import QCoreApplication, QTranslator
 
@@ -49,6 +49,6 @@ class SafeTranslationsTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(SafeTranslationsTest)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(SafeTranslationsTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)

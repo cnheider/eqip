@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 __author__ = "heider"
 __doc__ = r"""
@@ -15,25 +14,32 @@ __all__ = [
     "remove_requirements_from_name",
     "strip_item_state",
     "is_package_updatable",
+    "get_installed_version",
 ]
 
-import cgi
+
+import ensurepip
 import json
+import logging
 import os
 import subprocess
 import sys
 from enum import Enum
 from importlib.metadata import Distribution
 from pathlib import Path
-from typing import Iterable, List, Tuple, Optional, Union, Any
+from typing import Iterable, List, Optional, Tuple, Union
 from urllib.error import HTTPError
-from urllib.request import (
+from urllib.request import (  # TODO: should use QgsNetworkAccessManager instead for networking
     Request,
     urlopen,
-)  # TODO: should use QgsNetworkAccessManager instead for networking
+)
 
 from packaging import version
 from packaging.version import InvalidVersion, Version
+
+from .. import PROJECT_NAME
+from .project_settings import DEFAULT_PROJECT_SETTINGS
+from .settings import VERBOSE, read_project_setting
 
 # from warg import is_windows # avoid dependency import not standard python pkgs.
 CUR_OS = sys.platform
@@ -44,9 +50,14 @@ IS_MAC = CUR_OS.startswith("darwin")
 # @passes_kws_to(subprocess.check_call)
 def catching_callable(*args, **kwargs):
     try:
-        subprocess.check_call(*args, **kwargs)
+        logging.warning(f"{list(args)}, {list(kwargs.items())}")
+
+        # subprocess.check_call(*args, **kwargs)
+        output = subprocess.check_output(*args, **kwargs)
+        # subprocess.run(*args,**kwargs)
     except subprocess.CalledProcessError as e:
-        print(e)
+        output = (e.stderr, e.stdout, e)
+    logging.warning(output)
 
 
 SP_CALLABLE = catching_callable  # subprocess.call
@@ -101,15 +112,16 @@ def get_qgis_python_interpreter_path() -> Optional[Path]:
         if not try_path.exists():
             try_path = interpreter_path.parent / "python3.exe"
             if not try_path.exists():
-                print(f"Could not find python {try_path}")
+                logging.error(f"Could not find python {try_path}")
                 return None
         return try_path
+
     elif IS_MAC:
         try_path = interpreter_path.parent / "bin" / "python"
         if not try_path.exists():
             try_path = interpreter_path.parent / "bin" / "python3"
             if not try_path.exists():
-                print(f"Could not find python {try_path}")
+                logging.error(f"Could not find python {try_path}")
                 return None
         return try_path
 
@@ -120,7 +132,7 @@ def get_qgis_python_interpreter_path() -> Optional[Path]:
 
 def install_requirements_from_file(
     requirements_path: Path,
-    upgrade: bool = True,
+    upgrade: Optional[bool] = None,
     upgrade_strategy: UpgradeStrategyEnum = UpgradeStrategyEnum.only_if_needed,
 ) -> None:
     """
@@ -131,23 +143,67 @@ def install_requirements_from_file(
     :param requirements_path: Path to requirements.txt file.
     :rtype: None
     """
+    if not isinstance(requirements_path, Path):
+        requirements_path = Path(requirements_path)
 
-    args = ["install", "-r", str(requirements_path)]
+    requirements_file_parent_directory = str(requirements_path.parent.as_posix())
+
+    if False:
+        if "\\" in requirements_file_parent_directory:
+            print("found \\ in requirements")
+            requirements_file_parent_directory = (
+                requirements_file_parent_directory.replace("\\", "/")
+            )
+
+    os.environ["REQUIREMENTS_FILE_PARENT_DIRECTORY"] = (
+        requirements_file_parent_directory
+    )
+
+    if upgrade is None:
+        try:
+            from jord.qt_utilities import check_state_to_bool
+
+            upgrade = check_state_to_bool(
+                read_project_setting(
+                    "AUTO_UPGRADE",
+                    defaults=DEFAULT_PROJECT_SETTINGS,
+                    project_name=PROJECT_NAME,
+                )
+            )
+        except Exception as e:
+            if VERBOSE:
+                logging.info(f"{e}")
+
+    req_path_str = str(requirements_path)
+
+    args = ["install", "-r", req_path_str]
+
+    if True:  # No progress bar
+        args += ["--progress-bar", "off"]
+
+    if True:
+        args += ["--user"]
 
     if upgrade:
         args += ["--upgrade"]
 
+    if True:
+        args += ["--ignore-installed"]
+
+    if False:
+        args += ["--force-reinstall"]
+
     if upgrade_strategy:
         args += ["--upgrade-strategy", upgrade_strategy.value]
 
-    """
+    IGNORE = """
   other options:
-  
+
   --index-url
 --extra-index-url
 --no-index
 --find-links
-  
+
   --force-reinstall
   --ignore-installed
   --no-deps
@@ -172,7 +228,7 @@ def install_requirements_from_file(
             SP_CALLABLE([str(get_qgis_python_interpreter_path()), "-m", "pip", *args])
 
         else:
-            print("PIP IS STILL MISSING!")
+            logging.info("PIP IS STILL MISSING!")
 
 
 def is_pip_installed():
@@ -184,26 +240,33 @@ def is_pip_installed():
     return pip_present
 
 
-def install_pip_if_not_present():
-    if not is_pip_installed():
-        SP_CALLABLE(
-            [str(get_qgis_python_interpreter_path()), "-m", "ensurepip", "--upgrade"]
-        )
+def install_pip_if_not_present(always_upgrade: bool = True):
+    if not is_pip_installed() or always_upgrade:
+        if False:
+            ensurepip.bootstrap(upgrade=True)
+        else:
+            SP_CALLABLE(
+                [
+                    str(get_qgis_python_interpreter_path()),
+                    "-m",
+                    "ensurepip",
+                    "--upgrade",
+                ]
+            )
 
 
-"""
+IGNORE = """
 import pip
 
 def import_or_install(package):
     try:
         __import__(package)
     except ImportError:
-        pip.main(['install', package])    
+        pip.main(['install', package])
 """
 
 
 def pip_installed():
-    import sys
     import subprocess
 
     pip_check = subprocess.run([str(get_qgis_python_interpreter_path()), "-m", "pip"])
@@ -259,24 +322,30 @@ def get_installed_version(
         if dist:
             return version.parse(dist.version)
     except Exception as e:
-        print(e)
+        if VERBOSE:
+            logging.error(e)
 
     return None
 
 
 def get_newest_version(requirement_name: str) -> Optional[version.Version]:
     try:
-        return version.parse(get_versions_pypi(requirement_name)[-1])
+        version_from_index = get_versions_from_index(requirement_name)
+        if version_from_index:
+            return version.parse(version_from_index[-1])
+        return None
     except HTTPError:
         return None
 
 
-def get_charset(headers, default: str = "utf-8"):
+def get_charset(headers, default: str = "utf-8") -> str:
     # this is annoying.
     try:
         charset = headers.get_content_charset(default)
     except AttributeError:
         # Python 2
+        import cgi
+
         charset = headers.getparam("charset")
         if charset is None:
             ct_header = headers.getheader("Content-Type")
@@ -298,17 +367,17 @@ def json_get(url: str, headers: Tuple = (("Accept", "application/json"),)) -> st
     return data
 
 
-def get_data_pypi(name: str, index: str = DEFAULT_PIP_INDEX):
+def get_data_from_index(name: str, index: str = DEFAULT_PIP_INDEX) -> str:
     uri = f"{index.rstrip('/')}/{name.split('[')[0]}/json"
     data = json_get(uri)
     return data
 
 
-def get_versions_pypi(
+def get_versions_from_index(
     name: str, index: str = DEFAULT_PIP_INDEX
 ) -> Union[None, tuple[Version], Version]:
     try:
-        pypi_data = get_data_pypi(name, index)
+        pypi_data = get_data_from_index(name, index)
         releases = pypi_data["releases"]
     except:
         return None
@@ -316,18 +385,19 @@ def get_versions_pypi(
     try:
         return (*sorted(releases, key=version.parse),)
     except InvalidVersion as e:  # VERSION NUMBER MAYBE BROKEN
-        print(name, index, e)
+        if VERBOSE:
+            logging.info(name, index, e)
 
         try:
             return [str(version.parse(list(releases.keys())[-1]))]
         except InvalidVersion as e:  # VERSION NUMBER MAYBE BROKEN, GIVE UP
-            print(name, index, e)
+            if VERBOSE:
+                logging.info(name, index, e)
 
             return None
 
 
-def pip_freeze_list() -> List:
-    ...
+def pip_freeze_list() -> List: ...
 
 
 def is_requirement_updatable(requirement_name: str) -> bool:
@@ -352,14 +422,14 @@ def is_requirement_updatable(requirement_name: str) -> bool:
 
 
 def install_requirements_from_name(
-    *requirements_name: Iterable[str],
-    upgrade: bool = True,
+    *requirement_names: str,
+    upgrade: Optional[bool] = None,
     ignore_editable_installs: bool = True,
 ) -> None:
     """
     Install requirements from names.
 
-    :param requirements_name: Name of requirements.
+    :param requirement_names: Name of requirements.
     :param ignore_editable_installs: If an installation is editable do not change
     :param upgrade: Whether to upgrade already installed packages
     """
@@ -367,20 +437,37 @@ def install_requirements_from_name(
 
     # if isinstance(requirements_name, Iterable) and len(requirements_name)==1:
     # ... # handle wrong input format
+
+    if upgrade is None:
+        try:
+            from jord.qt_utilities import check_state_to_bool
+
+            upgrade = check_state_to_bool(
+                read_project_setting(
+                    "AUTO_UPGRADE",
+                    defaults=DEFAULT_PROJECT_SETTINGS,
+                    project_name=PROJECT_NAME,
+                )
+            )
+        except Exception as e:
+            logging.error(f"{e}")
+
     if ignore_editable_installs:
         try:
             from warg import package_is_editable
 
-            requirements_name = [
-                r for r in requirements_name if not package_is_editable(r)
+            requirement_names = [
+                r for r in requirement_names if not package_is_editable(r)
             ]
         except (ImportError, ModuleNotFoundError) as e:
             print(f"missing module, not checking for editable install, {e}")
 
     # --index-url
     # --upgrade-strategy <upgrade_strategy>
-    args = ["install", *requirements_name]
+    args = ["install", *requirement_names]
     # args = ["install", "rasterio", "--upgrade"] # RASTERIO for window DOES NOT WORK ATM, should be installed manually
+
+    # TODO: ADD OPTION TO PICK INDEX
 
     if upgrade:
         args += ["--upgrade"]
@@ -476,13 +563,13 @@ if __name__ == "__main__":
         print(is_package_updatable("warg"))
 
     def gasdsa():
-        print(get_versions_pypi("warg"))
+        print(get_versions_from_index("warg"))
 
     def uhasudh():
         print(get_newest_version("warg"))
 
     def uhasudasgfagh():
-        print(get_versions_pypi("warg"))
+        print(get_versions_from_index("warg"))
 
     # uhasudasgfagh()
 

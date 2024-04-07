@@ -1,5 +1,0 @@
-apppath>=1.0.2 # https://github.com/pything/apppath
-warg>=1.1.7 # https://github.com/pything/warg
-jord>=0.1.1  # https://github.com/aivclab/jord
-#pydevd-pycharm~=231.9011.38
-#importlib_resources

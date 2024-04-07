@@ -5,4 +5,5 @@ from .. import PROJECT_NAME
 DEFAULT_PROJECT_SETTINGS = {
     "RESOURCES_BASE_PATH": f":/{PROJECT_NAME.lower()}",
     "AUTO_ENABLE_DEP_HOOK": Qt.Checked,
+    "AUTO_UPGRADE": Qt.Unchecked,
 }

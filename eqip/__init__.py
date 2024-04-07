@@ -1,7 +1,7 @@
 from .constants import *
 
 
-def python_version_check(major: int = 3, minor: int = 8):
+def python_version_check(major: int = 3, minor: int = 8) -> None:
     """description"""
     import sys
 

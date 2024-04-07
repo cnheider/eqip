@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """This script uploads a plugin package to the plugin repository.
         Authors: A. Pasotti, V. Picavet
         git sha              : $TemplateVCSFormat
@@ -104,16 +103,16 @@ if __name__ == "__main__":
         options.server = SERVER
     if not options.port:
         options.port = PORT
-    if not options.username:
-        # interactive mode
+    if not options.username:  # interactive mode
+
         username = getpass.getuser()
-        print("Please enter user name [%s] :" % username, end=" ")
+        print(f"Please enter user name [{username}] :", end=" ")
 
         res = input()
         if res != "":
             options.username = res
         else:
             options.username = username
-    if not options.password:
-        # interactive mode
+    if not options.password:  # interactive mode
+
         options.password = getpass.getpass()

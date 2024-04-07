@@ -1,10 +1,10 @@
-![icon](icon.png)
+![icon](eqip/icon.png)
 
 # Eqip
 
 Install pip package for within QGIS.
 
-![demo](images/demo.png)
+![demo](eqip/images/demo.png)
 
 
 ## SETUP

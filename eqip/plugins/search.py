@@ -1,5 +1,6 @@
 import codecs
 import configparser
+import logging
 import os
 from pathlib import Path
 from typing import Tuple
@@ -25,8 +26,9 @@ def find_qgis_plugins(path: Path) -> Tuple:
         try:
             with codecs.open(str(metadata_file), "r", "utf8") as f:
                 config_parser.read_file(f)
-        except:
+        except Exception as e:
             config_parser = None
+            logging.error(e)
 
         yield (os.path.basename(plugin), config_parser)  # plugin_name
 
