@@ -45,6 +45,6 @@ jobs:
         uses: peter-evans/repository-dispatch@v1
         with:
           token: ${{ secrets.TOKEN }}
-          repository: automaps/qgis_plugin_index
+          repository: automaps/quiver
           event-type: merge-plugins
           client-payload: '{"name": "eqip", "version": "${{ env.RELEASE_VERSION }}", "url": "eqip.xml"}'
