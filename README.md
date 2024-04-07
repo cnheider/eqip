@@ -1,6 +1,7 @@
 ![icon](eqip/icon.png)
 
 # Eqip
+```Equip```
 
 Install pip package for within QGIS.
 
@@ -19,14 +20,14 @@ Hereafter you have the following options:
 
 clone the repository into the plugins directory of your qgis installation.
 
-for windows and with the profile default this is:
+for windows and with the profile default, this is:
 
 AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
 
 
 ### Install by symlinking into Qgis plugins directory
 
-for the default profile this is:
+for the default profile, this is:
 
 run python dev_install_plugin.py
 
@@ -37,4 +38,4 @@ Open Qgis and go to Plugins > Add > Repository > URL: http://10.0.52.7:5000/qgis
 
 Click Ok
 
-Navigate to All plugins find Eqip and install 
+Navigate to All plugins find Eqip and install
