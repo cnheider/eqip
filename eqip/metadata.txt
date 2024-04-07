@@ -5,17 +5,17 @@
 name=Eqip
 qgisMinimumVersion=3.0
 description=QGIS Pip Management
-version=0.1.2
+version=0.1.3
 author=CHEN @ MapsPeople A/S
 email=chen@mapspeople.com
 
 about=This tool provides a way to manage python requirements using pip in the QGIS python environment.
 
-tracker=https://github.com/cnheider/eqip/issues
-repository=https://github.com/cnheider/eqip
+tracker=https://github.com/automaps/eqip/issues
+repository=https://github.com/automaps/eqip
 # End of mandatory metadata
 
-homepage=https://github.com/cnheider/eqip
+homepage=https://github.com/automaps/eqip
 
 icon=icon.png
 
