@@ -20,7 +20,8 @@ from qgis.gui import QgisInterface
 from eqip import PLUGIN_DIR, PROJECT_NAME
 
 # noinspection PyUnresolvedReferences
-from .resources import *  # Initialize Qt resources from file resources.py # TODO: MAKE AN ASSERT ON THIS BEING IMPORTED? maybe add to devpack dev-tools
+from .resources import \
+    *  # Initialize Qt resources from file resources.py # TODO: MAKE AN ASSERT ON THIS BEING IMPORTED? maybe add to devpack dev-tools
 
 assert qt_version
 
