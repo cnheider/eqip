@@ -1,11 +1,11 @@
 """
- eqip
+eqip
 
-                              -------------------
-        begin                : 2022-05-23
-        git sha              : $Format:%H$
-        copyright            : (C) 2022 by Alexandra Institute
-        email                : christian.heider@alexandra.dk
+                             -------------------
+       begin                : 2022-05-23
+       git sha              : $Format:%H$
+       copyright            : (C) 2022 by Alexandra Institute
+       email                : christian.heider@alexandra.dk
 
 """
 
